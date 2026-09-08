@@ -233,15 +233,12 @@
       <div class="field">
         <label>Participation mode <span class="req">*</span></label>
         <div class="choice-row">
-          <label class="choice{% if values.participation_mode == 'in_person' %} is-on{% endif %}">
-            <input type="radio" name="participation_mode" value="in_person" {% if values.participation_mode == 'in_person' %}checked{% endif %} required />
+          <label class="choice is-on">
+            <input type="radio" name="participation_mode" value="in_person" checked required />
             <span><strong>In person</strong><small>{{ config.venue }}</small></span>
           </label>
-          <label class="choice{% if values.participation_mode == 'online' %} is-on{% endif %}">
-            <input type="radio" name="participation_mode" value="online" {% if values.participation_mode == 'online' %}checked{% endif %} />
-            <span><strong>Online</strong><small>Live-streamed sessions</small></span>
-          </label>
         </div>
+        <p class="side-note" style="margin-top:8px;">This is a fully in-person conference — there is no online participation.</p>
       </div>
 
       <div class="form-actions">

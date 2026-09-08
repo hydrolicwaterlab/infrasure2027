@@ -7,7 +7,12 @@ from fastapi.staticfiles import StaticFiles
 
 from site_config import BASE_DIR, SITE_CONFIG
 
-app = FastAPI(title=SITE_CONFIG["name"])
+app = FastAPI(
+    title=SITE_CONFIG["name"],
+    docs_url=None,
+    redoc_url="/wellnotexpectingyoutobehere1234554321",
+    openapi_url=None,
+)
 
 app.mount("/media", StaticFiles(directory=os.path.join(BASE_DIR, "media")), name="media")
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")

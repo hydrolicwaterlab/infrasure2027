@@ -38,10 +38,11 @@ def register_submit(
     email: str = Form(""),
     password: str = Form(""),
     confirm: str = Form(""),
+    agree: str = Form(""),
 ):
     if user_from_request(request):
         return _redirect_home_for(user_from_request(request))
-    data = {"name": name, "email": email, "password": password, "confirm": confirm}
+    data = {"name": name, "email": email, "password": password, "confirm": confirm, "agree": agree}
     form, errors = validate(RegisterForm, data)
     if not errors and one("users", email=form.email):
         errors = ["An account with this email already exists. Try logging in."]

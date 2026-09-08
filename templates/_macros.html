@@ -32,7 +32,7 @@
 {%- endmacro %}
 
 {% macro mode_badge(m) -%}
-  <span class="badge badge-neutral">{{ {"in_person": "In person", "online": "Online"}.get(m, m) }}</span>
+  <span class="badge badge-neutral">{{ {"in_person": "In person"}.get(m, m) }}</span>
 {%- endmacro %}
 
 {% macro active_badge(user) -%}

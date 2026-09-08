@@ -1,6 +1,36 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui %}
 
+{% macro member_card(m) %}
+  <article class="team-card">
+    <div class="team-photo-wrap">
+      <div class="team-photo-placeholder" aria-hidden="true">{{ m.initials or m.name }}</div>
+      {% if m.photo %}
+        <img class="team-photo" src="{{ m.photo }}" alt="{{ m.name }}" loading="lazy" onerror="this.style.display='none';" />
+      {% endif %}
+    </div>
+    <div class="team-info">
+      <h3 class="team-name">{{ m.name }}</h3>
+      <p class="team-role">{{ m.role }}</p>
+      <p class="team-affil">{{ m.affiliation }}</p>
+    </div>
+  </article>
+{% endmacro %}
+
+{% macro team_group(section) %}
+  <div class="team-group">
+    <div class="team-group-head">
+      <h2 class="team-group-title">{{ section.group }}</h2>
+      <span class="team-count" aria-label="{{ section.members|length }} members">{{ section.members|length }}</span>
+    </div>
+    <div class="team-grid team-grid--{{ section.members|length }}">
+      {% for m in section.members %}
+        {{ member_card(m) }}
+      {% endfor %}
+    </div>
+  </div>
+{% endmacro %}
+
 {% block title %}{{ config.name }} — {{ config.tagline }}{% endblock %}
 
 {% block content %}
@@ -227,7 +257,8 @@
       <div class="submit-copy">
         <p class="eyebrow"><span class="eyebrow-num">05</span> — Call for Contributions</p>
         <h2 class="display display-on-dark">Share your research.<br />Shape resilient infrastructure.</h2>
-        <p class="submit-lead">Present at {{ config.name }} — PPT or Poster, up to 2 per student.</p>
+        <p class="submit-lead">Present at {{ config.name }}</p>
+        <p class="submit-lead">PPT or Poster, up to 2 per student.</p>
         <div class="submit-cta">
           <a class="btn btn-accent btn-lg btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Submit your work <span aria-hidden="true">&rarr;</span></a>
         </div>
@@ -237,6 +268,7 @@
         {% for r in config.submit_rules %}
           <li>{{ r }}</li>
         {% endfor %}
+        <li>This is a fully offline (in-person) event — no online participation.</li>
       </ul>
     </div>
     <ol class="submit-steps">
@@ -259,55 +291,78 @@
   </div>
 </section>
 
-<!-- 8. CALL FOR PAPERS — IMPORTANT DATES -->
+<!-- 8. CALL FOR PAPERS — TIMELINE & SUBMISSION INFORMATION -->
 <section class="section section-white" id="cfp">
   <div class="container">
-    <header class="section-head">
+    <header class="section-head section-head--cfp">
       <p class="eyebrow"><span class="eyebrow-num">06</span> — Call for Papers</p>
-      <h2 class="display">Important dates &amp; submission information</h2>
+      <h2 class="display">Important dates &amp; submission</h2>
     </header>
-    <div class="dates-grid">
-      <dl class="dates-list">
-        <div class="date-row">
-          <dt>Registration opens</dt>
-          <dd class="tba">To be announced</dd>
-        </div>
-        <div class="date-row">
-          <dt>PPT / Poster submission opens</dt>
-          <dd class="tba">To be announced</dd>
-        </div>
-        <div class="date-row">
-          <dt>Submission deadline</dt>
-          <dd class="tba">To be announced</dd>
-        </div>
-        <div class="date-row">
-          <dt>Intimation of acceptance</dt>
-          <dd class="tba">To be announced</dd>
-        </div>
-        <div class="date-row">
-          <dt>Conference dates</dt>
-          <dd class="date-hi">{{ config.dates }}</dd>
-        </div>
-        <div class="date-row">
-          <dt>Venue</dt>
-          <dd>{{ config.venue }}</dd>
-        </div>
-      </dl>
-      <aside class="dates-note">
-        <h3 class="mini-head">Submission information</h3>
-        <p>Contributions are invited as PPT or Poster presentations across the nine core themes. Each submission is reviewed by the respective theme incharge, who decides whether it is selected.</p>
-        <p class="dates-updated">Dates will be updated here as they are announced.</p>
-      </aside>
+
+    <!-- 5-step submission journey -->
+    <ol class="milestones">
+      {% for m in config.cfp_timeline %}
+      <li class="milestone">
+        <span class="milestone-node" aria-hidden="true">{{ "%02d"|format(loop.index) }}</span>
+        <h3 class="milestone-label">{{ m.label }}</h3>
+        <p class="milestone-date tba">{{ m.date or "To be announced" }}</p>
+      </li>
+      {% endfor %}
+      <li class="milestone milestone--hi">
+        <span class="milestone-node" aria-hidden="true">05</span>
+        <h3 class="milestone-label">Conference</h3>
+        <p class="milestone-date">{{ config.dates }}</p>
+        <p class="milestone-venue">{{ config.venue }}</p>
+      </li>
+    </ol>
+
+    <!-- Registration fees -->
+    <div class="cfp-cols">
+      <section class="fees">
+        <h3 class="mini-head">Registration fees</h3>
+        <dl class="fees-grid">
+          {% for c in config.registration_fees.categories %}
+          <div class="fee">
+            <dt>{{ c.label }}</dt>
+            <dd class="tba">{{ c.amount or "To be announced" }}</dd>
+          </div>
+          {% endfor %}
+        </dl>
+      </section>
     </div>
+
+    <p class="cfp-foot">{{ config.registration_fees.note }}</p>
   </div>
 </section>
 
-<!-- 9. ANNOUNCEMENTS -->
+<!-- 9. ORGANIZING COMMITTEE -->
+<section class="section section-tint" id="committee">
+  <div class="container container-narrow team-page">
+    <header class="section-head">
+      <p class="eyebrow"><span class="eyebrow-num">07</span> — Organizing Committee</p>
+      <h2 class="display">The people behind {{ config.name }}</h2>
+    </header>
+    <div class="team-duo">
+      {% for section in config.organizing_committee %}
+        {% if section.group in ["Patron", "Chairperson"] %}
+          {{ team_group(section) }}
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% for section in config.organizing_committee %}
+      {% if section.group not in ["Patron", "Chairperson"] %}
+        {{ team_group(section) }}
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+
+<!-- 10. ANNOUNCEMENTS -->
 {% if announcements %}
 <section class="section" id="announcements">
   <div class="container container-narrow">
     <header class="section-head">
-      <p class="eyebrow"><span class="eyebrow-num">07</span> — News &amp; Updates</p>
+      <p class="eyebrow"><span class="eyebrow-num">08</span> — News &amp; Updates</p>
       <h2 class="display">Announcements</h2>
     </header>
     {% for a in announcements %}
@@ -323,11 +378,11 @@
 </section>
 {% endif %}
 
-<!-- 10. FAQ -->
+<!-- 11. FAQ -->
 <section class="section section-paper" id="faq">
   <div class="container container-narrow">
     <header class="section-head">
-      <p class="eyebrow"><span class="eyebrow-num">08</span> — Help Centre</p>
+      <p class="eyebrow"><span class="eyebrow-num">09</span> — Help Centre</p>
       <h2 class="display">Frequently asked questions</h2>
       <p style="margin-top:12px;color:var(--muted);max-width:62ch;">Find answers about registration, submissions, selection, and payment for {{ config.name }}.</p>
     </header>
@@ -355,22 +410,6 @@
       </div>
     {% endif %}
     <p class="side-note faq-contact">Still have questions? Email <a href="mailto:{{ config.email }}">{{ config.email }}</a>.</p>
-  </div>
-</section>
-
-<!-- 11. REGISTRATION -->
-<section class="section section-navy" id="register">
-  <div class="container reg-inner">
-    <div class="reg-copy">
-      <h2 class="display">Register for the Conference</h2>
-      <p>Join researchers, engineers, policymakers, and students at {{ config.name }}.
-      Create your account, register your participation, and apply with a PPT or Poster.</p>
-    </div>
-    <div class="reg-cta">
-      <a class="btn btn-primary btn-lg btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register Now</a>
-      <a class="btn btn-outline btn-lg btn-disabled-temp" href="/login" title="Registration will start soon" aria-disabled="true" tabindex="-1">Already a member? Login</a>
-    </div>
-    <p class="register-soon-note" style="width:100%; margin-top:12px; text-align:center; color: rgba(255,255,255,.75);">Registration will start soon</p>
   </div>
 </section>
 

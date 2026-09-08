@@ -11,7 +11,7 @@ ROLES = ("student", "theme_incharge", "reviewer", "master_admin")
 
 _sessions = {}  # token -> {"user_id", "role", "expires"}
 
-SESSION_TTL = 60 * 60 * 24 * 7  # 7 days
+SESSION_TTL = 6 * 60 * 60  # 6 hours
 
 
 def hash_password(password: str) -> str:

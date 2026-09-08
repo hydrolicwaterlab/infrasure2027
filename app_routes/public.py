@@ -38,3 +38,11 @@ def landing(request: Request):
     ctx["announcements"] = announcements_list()
     ctx["faq_groups"] = faq_groups()
     return templates.TemplateResponse(request, "index.html", ctx)
+
+
+@router.get("/policies", response_class=HTMLResponse)
+def policies(request: Request):
+    ctx = {"request": request, "config": SITE_CONFIG}
+    ctx.update(auth_context(request))
+    ctx.update(flash_text(request.query_params.get("msg")))
+    return templates.TemplateResponse(request, "policies.html", ctx)

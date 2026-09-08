@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="{{ config.tagline }} — {{ config.organizer }}, IIT Kharagpur. {{ config.dates }}." />
+  <meta name="description" content="{{ config.tagline }} — {{ config.organizer }}. {{ config.dates }}." />
   <title>{% block title %}{{ config.name }}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -29,13 +29,14 @@
 
       <nav class="nav-links" aria-label="Primary">
         <a href="/#about">About</a>
-        <a href="/#objectives">Objectives</a>
         <a href="/#themes">Themes</a>
         <a href="/#submit">Submit</a>
-        <a href="/#register">Register</a>
-<a href="/#announcements">Announcements</a>
+        <a href="/#cfp">Timeline</a>
+        <a href="/#committee">Committee</a>
+        <a href="/media/INFRASURE2027_broucher.pdf" download>Brochure</a>
+        <a href="/#announcements">Announcements</a>
         <a href="/#faq">FAQ</a>
-        <a href="#contact">Contact</a>
+        <a href="/policies"{% if request.url.path == "/policies" %} class="is-active" aria-current="page"{% endif %}>Policies</a>
       </nav>
 
       <div class="nav-actions">
@@ -72,13 +73,14 @@
     <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile">
       <div class="container mobile-nav-inner">
         <a class="mobile-link" href="/#about">About</a>
-        <a class="mobile-link" href="/#objectives">Objectives</a>
         <a class="mobile-link" href="/#themes">Themes</a>
         <a class="mobile-link" href="/#submit">Submit</a>
-        <a class="mobile-link" href="/#register">Register</a>
+        <a class="mobile-link" href="/#cfp">Timeline</a>
+        <a class="mobile-link" href="/#committee">Committee</a>
         <a class="mobile-link" href="/#announcements">Announcements</a>
         <a class="mobile-link" href="/#faq">FAQ</a>
-        <a class="mobile-link" href="#contact">Contact</a>
+        <a class="mobile-link" href="/policies">Policies</a>
+        <a class="mobile-link" href="/media/INFRASURE2027_broucher.pdf" download>Brochure</a>
         <div class="mobile-actions">
           {% if current_user %}
             {% set role = current_user.role %}
@@ -123,17 +125,15 @@
           </span>
         </div>
         <p class="footer-jubilee">{{ config.jubilee }}</p>
+        <p class="footer-hi footer-conf-date">{{ config.dates }}</p>
+        <p class="footer-conf-venue">{{ config.venue }}</p>
       </div>
-      <div>
-        <h4>Conference</h4>
-        <p class="footer-hi">{{ config.dates }}</p>
-        <p>{{ config.venue }}</p>
-      </div>
-      <div>
+      <div class="footer-org">
         <h4>Organized by</h4>
         <p>{{ config.organizer }}</p>
         <p>Indian Institute of Technology Kharagpur</p>
-        <p>Convener: {{ config.convener }}</p>
+        <p>Convener: Dr. Manish Pandey</p>
+        <p>Co-Convener: Dr. Troyee Tanu Dutta</p>
         <p><a href="mailto:{{ config.email }}">{{ config.email }}</a></p>
       </div>
       <div>
@@ -141,16 +141,30 @@
         <ul>
           <li><a href="/register" class="btn-disabled-temp" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register Now</a></li>
           <li><a href="/login" class="btn-disabled-temp" title="Registration will start soon" aria-disabled="true" tabindex="-1">Login</a></li>
-          <li><a href="/#announcements">Announcements</a></li>
-          <li><a href="/#faq">FAQ</a></li>
           <li><a href="/#about">About</a></li>
           <li><a href="/#themes">Themes</a></li>
           <li><a href="/#submit">Call for Contributions</a></li>
+          <li><a href="/#committee">Organizing Committee</a></li>
+          <li><a href="/#faq">FAQ</a></li>
+          <li><a href="/#announcements">Announcements</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Policies</h4>
+        <ul>
+          <li><a href="/policies/#disclaimer">Disclaimer</a></li>
+          <li><a href="/policies/#privacy-policy">Privacy Policy</a></li>
+          <li><a href="/policies/#code-of-conduct">Code of Conduct</a></li>
+          <li><a href="/policies/#terms-conditions">Terms &amp; Conditions</a></li>
+          <li><a href="/policies/#payment-policy">Payment Policy</a></li>
+          <li><a href="/policies/#publication-ethics">Publication Ethics</a></li>
+          <li><a href="/policies/#submission-guidelines">Submission Guidelines</a></li>
+          <li><a href="/policies/#others">Others</a></li> <!-- include cookies and visa and others -->
         </ul>
       </div>
     </div>
     <div class="container footer-bottom">
-      <p>&copy; 2027 {{ config.name }} · {{ config.organizer }}. All rights reserved.</p>
+      <p>&copy; 2027 {{ config.name }} . All rights reserved.</p>
       <p>{{ config.address }}</p>
     </div>
   </footer>

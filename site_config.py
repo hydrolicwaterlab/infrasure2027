@@ -12,7 +12,7 @@ SITE_CONFIG = {
     "tagline": "International Conference on Infrastructure Sustainability and Resilience Forum",
     "dates": "22 – 24 January 2027",
     "venue": "Rajarhat Extension Centre, IIT Kharagpur, Kolkata",
-    "organizer": "Department of Civil Engineering, IIT Kharagpur",
+    "organizer": "Department of Civil Engineering",
     "jubilee": "Platinum Jubilee Celebrations of IIT Kharagpur (est. 1951)",
     "convener": "Prof. Manish Pandey",
     "email": "infrasure2027@civil.iitkgp.ac.in",
@@ -238,6 +238,21 @@ SITE_CONFIG = {
         "Pick any of the 9 themes — it's your choice",
         "Each theme incharge reviews your submission and decides Selected / Not Selected",
     ],
+    "registration_fees": {
+        "note": "Dates and fees will be updated as they are confirmed by the organisers.",
+        "categories": [
+            {"label": "Student", "amount": None},
+            {"label": "Faculty / Academic", "amount": None},
+            {"label": "Industry professional", "amount": None},
+            {"label": "Foreign participant", "amount": None},
+        ],
+    },
+    "cfp_timeline": [
+        {"label": "Registration opens", "date": None},
+        {"label": "PPT / Poster submission opens", "date": None},
+        {"label": "Submission deadline", "date": None},
+        {"label": "Intimation of acceptance", "date": None},
+    ],
     "gallery": [
         {"src": "/media/img1.jpeg", "alt": "INFRASURE event image 1"},
         {"src": "/media/img2.jpeg", "alt": "INFRASURE event image 2"},
@@ -246,6 +261,143 @@ SITE_CONFIG = {
         {"src": "/media/img5.jpeg", "alt": "INFRASURE event image 5"},
     ],
     "address": "Department of Civil Engineering, IIT Kharagpur, Kharagpur — 721302, West Bengal, India",
+    "organizing_committee": [
+        {
+            "group": "Patron",
+            "members": [
+                {
+                    "name": "Prof. Suman Chakraborty",
+                    "initials": "SC",
+                    "role": "Patron",
+                    "affiliation": "Director, IIT Kharagpur",
+                    "photo": "/media/peoples/Sumanchakarborty.jpeg",
+                },
+            ],
+        },
+        {
+            "group": "Chairperson",
+            "members": [
+                {
+                    "name": "Prof. Damodar Maity",
+                    "initials": "DM",
+                    "role": "Chairperson",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/ProfDamodarMaity.jpeg",
+                },
+            ],
+        },
+        {
+            "group": "Co-Chairpersons",
+            "members": [
+                {
+                    "name": "Prof. A. K. Gupta",
+                    "initials": "AKG",
+                    "role": "Co-Chairperson",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/ProfAKGupta.jpeg",
+                },
+                {
+                    "name": "Prof. Amit Shaw",
+                    "initials": "AS",
+                    "role": "Co-Chairperson",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/ProfAmitShaw.jpeg",
+                },
+                {
+                    "name": "Prof. Anirban Dhar",
+                    "initials": "AD",
+                    "role": "Co-Chairperson",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/ProfAnirbanDhar.jpeg",
+                },
+                {
+                    "name": "Prof. M. A. Reddy",
+                    "initials": "MR",
+                    "role": "Co-Chairperson",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/ProfMAReddy.jpeg",
+                },
+            ],
+        },
+        {
+            "group": "Convener & Co-Convener",
+            "members": [
+                {
+                    "name": "Dr. Manish Pandey",
+                    "initials": "MP",
+                    "role": "Convener",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/DrManishPandey.jpeg",
+                },
+                {
+                    "name": "Dr. Troyee Tanu Dutta",
+                    "initials": "TD",
+                    "role": "Co-Convener",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/DrTroyeeTanuDutta.jpeg",
+                },
+            ],
+        },
+        {
+            "group": "Organizing Secretaries",
+            "members": [
+                {
+                    "name": "Dr. Abhishek Ghosh Dastider",
+                    "initials": "AG",
+                    "role": "Organizing Secretary",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/DrAbhishekGhoshDastider.jpeg",
+                },
+                {
+                    "name": "Dr. Gaurav Misuriya",
+                    "initials": "GM",
+                    "role": "Organizing Secretary",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/DrGauravMisuriya.jpeg",
+                },
+                {
+                    "name": "Dr. Amit Passi",
+                    "initials": "AP",
+                    "role": "Organizing Secretary",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/DrAmitPassi.jpeg",
+                },
+                {
+                    "name": "Dr. Nandan Maiti",
+                    "initials": "NM",
+                    "role": "Organizing Secretary",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": "/media/peoples/DrNAndanMaiti.jpeg",
+                },
+                {
+                    "name": "Dr. Pratyush Kumar",
+                    "initials": "PK",
+                    "role": "Organizing Secretary",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": None,
+                },
+                {
+                    "name": "Dr. Reshma Mohan",
+                    "initials": "RM",
+                    "role": "Organizing Secretary",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": None,
+                },
+            ],
+        },
+        {
+            "group": "Treasurer",
+            "members": [
+                {
+                    "name": "Prof. Kousik Deb",
+                    "initials": "KD",
+                    "role": "Treasurer",
+                    "affiliation": "IIT Kharagpur",
+                    "photo": None,
+                },
+            ],
+        },
+    ],
 }
 
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))

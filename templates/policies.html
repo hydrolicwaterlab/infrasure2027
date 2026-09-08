@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Policies — {{ config.name }}{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Policies</p>
+    <h1 class="display display-on-dark">Policies & Guidelines</h1>
+    <p class="page-head-sub">The rules, commitments, and standards that govern participation in {{ config.short_title }}</p>
+  </div>
+</section>
+
+<section class="policy-section">
+  <div class="container policy-layout">
+    <aside class="policy-toc" aria-label="On this page">
+      <p class="policy-toc-title">On this page</p>
+      <ul>
+        <li><a href="#disclaimer">Disclaimer</a></li>
+        <li><a href="#privacy-policy">Privacy Policy</a></li>
+        <li><a href="#code-of-conduct">Code of Conduct</a></li>
+        <li><a href="#terms-conditions">Terms & Conditions</a></li>
+        <li><a href="#payment-policy">Payment Policy</a></li>
+        <li><a href="#publication-ethics">Publication Ethics</a></li>
+        <li><a href="#submission-guidelines">Submission Guidelines</a></li>
+        <li><a href="#others">Others</a></li>
+      </ul>
+    </aside>
+
+    <div class="policy-body">
+
+      <article class="policy-block" id="disclaimer">
+        <h2 class="policy-title">Disclaimer</h2>
+        <ul class="policy-list">
+          <li><strong>Information accuracy.</strong> All information on this website is provided in good faith for general information only. While we strive to keep it accurate and current, {{ config.short_title }} makes no representations or warranties — express or implied — about the completeness, accuracy, or reliability of any content on this site.</li>
+          <li><strong>Changes to programme.</strong> Dates, venue, programme schedule, speakers, themes, and fees are subject to change. We will communicate any changes through this website and registered email addresses as soon as they are confirmed.</li>
+          <li><strong>Force majeure.</strong> In the event of unforeseen circumstances beyond reasonable control — including but not limited to cyclones, floods, pandemics, strikes, fire, or government orders — the organisers reserve the right to reschedule, relocate, or reduce the duration of the conference. In such cases the liability of the organisers is limited to the registration fee paid.</li>
+          <li><strong>External links.</strong> This website may contain links to third-party websites. We do not control and are not responsible for the content, accuracy, or privacy practices of those sites.</li>
+          <li><strong>No professional advice.</strong> Content on this website does not constitute professional, legal, medical, investment, or other advice.</li>
+          <li><strong>Limitation of liability.</strong> To the fullest extent permitted by law, {{ config.name }} and its organisers shall not be liable for any direct, indirect, incidental, or consequential damages arising out of access to, or use of, this website.</li>
+          <li><strong>Governing law.</strong> These disclaimers are governed by the laws of India and are subject to the exclusive jurisdiction of the courts at Kharagpur, West Bengal.</li>
+        </ul>
+      </article>
+
+      <article class="policy-block" id="privacy-policy">
+        <h2 class="policy-title">Privacy Policy</h2>
+        <p class="policy-lead">This policy explains what personal data {{ config.short_title }} collects, why we collect it, and how we protect it. It applies to all visitors and registered participants.</p>
+        <h3 class="policy-sub">1. Data we collect</h3>
+        <ul class="policy-list">
+          <li><strong>Account information:</strong> name, email address, phone number, institute/university, department, and designation required to create a participant account.</li>
+          <li><strong>Registration details:</strong> category, mode of participation, registration fees paid, and any information you provide in the participant details form.</li>
+          <li><strong>Submission information:</strong> abstracts, PPTs, posters, and any co-author details submitted through the portal.</li>
+          <li><strong>Technical data:</strong> a small session cookie (<code>session_token</code>, valid 6 hours) used to keep you logged in. We do not use tracking or advertising cookies.</li>
+        </ul>
+        <h3 class="policy-sub">2. How we use your data</h3>
+        <p>Your data is used solely for the legitimate purposes of this conference: processing registration and payments, managing submissions and the peer-review process, sharing conference updates, issuing certificates and proceedings, and meeting statutory reporting requirements. Your data is <strong>not sold or used for commercial marketing</strong>.</p>
+        <h3 class="policy-sub">3. Who can access your data</h3>
+        <p>Access is strictly need-to-know: the organising committee and administrative staff by necessity; theme incharges and reviewers only to the extent required for reviewing your submission; and the publisher (e.g. Springer) only if your paper is selected for publication. Legal and regulatory authorities may access data where required by Indian law.</p>
+        <h3 class="policy-sub">4. Data retention</h3>
+        <p>Your data is retained for the duration of the conference and for as long as required by applicable records and tax regulations. After that, it is securely deleted or anonymised unless you consent otherwise.</p>
+        <h3 class="policy-sub">5. Your rights</h3>
+        <p>Under the Digital Personal Data Protection Act, 2023 (and equivalently GDPR for EU participants), you may request access to, correction of, or deletion of your personal data at any time.</p>
+        <h3 class="policy-sub">6. Security</h3>
+        <p>We implement reasonable administrative and technical safeguards — including encrypted transmission, restricted access, and secure storage — to protect your data from unauthorised access, alteration, or loss.</p>
+        <h3 class="policy-sub">7. Contact</h3>
+        <p>For any privacy question, correction, or deletion request, write to <a href="mailto:{{ config.email }}">{{ config.email }}</a>. We will respond within 30 days.</p>
+      </article>
+
+      <article class="policy-block" id="code-of-conduct">
+        <h2 class="policy-title">Code of Conduct</h2>
+        <p class="policy-lead">{{ config.short_title }} is committed to providing a welcoming, respectful, and harassment-free experience for all participants, regardless of background, identity, nationality, or academic standing.</p>
+        <h3 class="policy-sub">1. Expected behaviour</h3>
+        <ul class="policy-list">
+          <li>Treat every participant, organiser, speaker, and staff member with respect and courtesy.</li>
+          <li>Engage constructively in scientific and professional discussions.</li>
+          <li>Follow all instructions of session chairs and the organising committee.</li>
+          <li>Uphold academic integrity — including honest authorship and honest reporting of results.</li>
+        </ul>
+        <h3 class="policy-sub">2. Unacceptable behaviour</h3>
+        <ul class="policy-list">
+          <li>Harassment in any form — verbal, physical, or written — including harassment based on gender, race, religion, caste, disability, or any other protected characteristic.</li>
+          <li>Discrimination, intimidation, stalking, or unwanted attention of any kind.</li>
+          <li>Disruption of sessions or conference activities.</li>
+          <li>Plagiarism, data fabrication, or other academic misconduct.</li>
+        </ul>
+        <h3 class="policy-sub">3. Reporting an incident</h3>
+        <p>If you experience or witness a violation, please report it to any member of the organising committee, or directly at <a href="mailto:{{ config.email }}">{{ config.email }}</a>. Reports will be handled confidentially and proportionately.</p>
+        <h3 class="policy-sub">4. Internal Committee (POSH Act)</h3>
+        <p>As an event hosted by IIT Kharagpur, this conference operates under the institution&rsquo;s Internal Committee constituted under the POSH Act, 2013. Complaints of sexual harassment may be referred to this committee for appropriate action.</p>
+        <h3 class="policy-sub">5. Consequences</h3>
+        <p>Depending on the severity of the violation, consequences may include a warning, exclusion from sessions, or removal from the conference. In cases of serious misconduct, removal applies <strong>without refund</strong> of any fees paid.</p>
+      </article>
+
+      <article class="policy-block" id="terms-conditions">
+        <h2 class="policy-title">Terms & Conditions</h2>
+        <h3 class="policy-sub">1. Eligibility</h3>
+        <p>Registration on this website is open to persons aged 18 years or above. Participants must provide accurate and complete information at the time of account creation and registration.</p>
+        <h3 class="policy-sub">2. Accounts</h3>
+        <ul class="policy-list">
+          <li>Each participant is permitted one account. Accounts are personal and must not be shared.</li>
+          <li>You are responsible for maintaining the confidentiality of your credentials and for all activity under your account.</li>
+          <li>We may deactivate or reject any account that provides false information, impersonates another person, or attempts to submit plagiarised content.</li>
+        </ul>
+        <h3 class="policy-sub">3. Submissions</h3>
+        <p>Participants are solely responsible for the originality and accuracy of their submitted work. By submitting, you confirm that the work is your own, that co-authors have consented, and that the work complies with our <a href="#publication-ethics">Publication Ethics</a> policy.</p>
+        <h3 class="policy-sub">4. Decisions</h3>
+        <p>All decisions regarding selection of submissions are made through the peer-review process and are <strong>final</strong>. The organisers and theme incharges reserve the right to reject any submission that violates these terms or the Code of Conduct.</p>
+        <h3 class="policy-sub">5. Payment</h3>
+        <p>Registration fees must be paid in full for participation to be confirmed. Fees, refunds, and cancellations are governed by the <a href="#payment-policy">Payment Policy</a>.</p>
+        <h3 class="policy-sub">6. Intellectual property</h3>
+        <p>Authors retain copyright over their work. By submitting, authors grant {{ config.short_title }} a non-exclusive licence to publish the accepted work in the conference proceedings, website, and related materials.</p>
+        <h3 class="policy-sub">7. Limitation of liability</h3>
+        <p>To the fullest extent permitted by law, liability of the organisers is limited to the registration fee paid by the participant.</p>
+        <h3 class="policy-sub">8. Governing law</h3>
+        <p>These terms are governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of the competent courts at Kolkata, West Bengal.</p>
+      </article>
+
+      <article class="policy-block" id="payment-policy">
+        <h2 class="policy-title">Payment Policy</h2>
+        <p class="policy-lead">This policy governs registration fees, payment methods, refunds, and cancellations. Fee amounts are <strong>TBD (to be determined)</strong> until confirmed by the organisers.</p>
+        <h3 class="policy-sub">1. Fee structure</h3>
+        <ul class="policy-list">
+          <li><strong>Students (Indian):</strong> ₹&nbsp;TBD</li>
+          <li><strong>Faculty / Academic (Indian):</strong> ₹&nbsp;TBD</li>
+          <li><strong>Industry professionals:</strong> ₹&nbsp;TBD</li>
+          <li><strong>Foreign participants:</strong> USD&nbsp;TBD</li>
+        </ul>
+        <p>Rates may differ between early-bird and regular registration. GST, if applicable, is additional.</p>
+        <h3 class="policy-sub">2. What the fee includes</h3>
+        <p>The registration fee includes conference participation, kit, working lunches and tea, a certificate, and a copy of the proceedings (print or digital as applicable).</p>
+        <h3 class="policy-sub">3. Payment methods</h3>
+        <p>Payments will be accepted through UPI, net banking, credit/debit cards, and demand draft to the official IIT Kharagpur account. Institutional payments via purchase order may be permitted on request. A payment receipt / invoice will be issued for every successful payment.</p>
+        <h3 class="policy-sub">4. Failed or duplicate payments</h3>
+        <p>If a payment fails, no fee is charged. If your account is debited twice for the same registration, contact us with the payment reference and the duplicate amount will be refunded within 15 working days.</p>
+        <h3 class="policy-sub">5. Refund & cancellation</h3>
+        <ul class="policy-list">
+          <li>Full refund of the registration fee if cancelled before the early-bird deadline (date TBD).</li>
+          <li>50% refund if cancelled before the regular registration deadline (date TBD).</li>
+          <li>No refund after the regular registration deadline, or for removals under the Code of Conduct.</li>
+          <li>If the conference is cancelled due to force majeure, the liability of the organisers is limited to refunding the registration fee collected.</li>
+        </ul>
+        <h3 class="policy-sub">6. Contact</h3>
+        <p>For payment, invoice, or refund queries, write to <a href="mailto:{{ config.email }}">{{ config.email }}</a>.</p>
+      </article>
+
+      <article class="policy-block" id="publication-ethics">
+        <h2 class="policy-title">Publication Ethics</h2>
+        <p class="policy-lead">These standards apply to every abstract, PPT, poster, and paper submitted to or published under {{ config.short_title }}.</p>
+        <h3 class="policy-sub">1. Originality</h3>
+        <p>All submitted work must be original, previously unpublished, and must not be under consideration elsewhere at the time of submission. Text similarity must be within the acceptable threshold (currently <strong>&lt;10%</strong>) when checked with standard plagiarism-detection software (e.g. Turnitin / iThenticate).</p>
+        <h3 class="policy-sub">2. Honest reporting</h3>
+        <p>Authors must accurately represent their data, methods, and results. Fabrication or falsification of data is a serious offence.</p>
+        <h3 class="policy-sub">3. Authorship</h3>
+        <p>All listed authors must have made a meaningful scholarly contribution and must have consented to be authors. The presenting author must be authorised by all co-authors.</p>
+        <h3 class="policy-sub">4. AI-assisted writing</h3>
+        <p>Use of AI tools in writing shall be disclosed where required. Authors remain fully responsible for the accuracy, integrity, and originality of the work. AI tools may not be listed as authors.</p>
+        <h3 class="policy-sub">5. Review integrity</h3>
+        <p>Reviewers evaluate submissions objectively, on scholarly merit, and treat all submissions as confidential. Conflicts of interest are disclosed and managed.</p>
+        <h3 class="policy-sub">6. Plagiarism after acceptance</h3>
+        <p>If plagiarism or misconduct is detected at any stage — including after acceptance or publication — the submission may be withdrawn or retracted, and the matter may be reported to the author&rsquo;s institution.</p>
+        <h3 class="policy-sub">7. Copyright</h3>
+        <p>Authors retain copyright of their work and grant the organisers permission to publish accepted work in the ISBN proceedings and any associated Springer publication under the agreed terms.</p>
+      </article>
+
+      <article class="policy-block" id="submission-guidelines">
+        <h2 class="policy-title">Submission Guidelines</h2>
+        <h3 class="policy-sub">1. Who can submit</h3>
+        <p>Students (UG, PG, PhD, and postdoctoral researchers), academics, scientists, and industry professionals. At least one author must register for the conference for a submission to be considered.</p>
+        <h3 class="policy-sub">2. Formats</h3>
+        <ul class="policy-list">
+          <li><strong>PPT:</strong> Presentation slides, submitted as a PDF or PPTX using the provided template.</li>
+          <li><strong>Poster:</strong> A0 / A1 portrait, submitted as a PDF or PNG using the provided template (dimensions TBD).</li>
+        </ul>
+        <h3 class="policy-sub">3. Abstract</h3>
+        <p>The abstract should clearly state the objective, method, results, and significance of the work. Word and section limits will be specified in the submission portal (limits TBD). Figures and tables may be included in the abstract where permitted.</p>
+        <h3 class="policy-sub">4. Limits & rules</h3>
+        <ul class="policy-list">
+          <li>You may submit up to <strong>two submissions</strong>.</li>
+          <li>Each submission may target only one theme.</li>
+          <li>You may not submit the same work in both PPT and Poster formats.</li>
+          <li>Submissions must follow the referencing style specified on the portal.</li>
+          <li>Accepted file formats: PDF, PPTX, PNG (file size limit TBD).</li>
+        </ul>
+        <h3 class="policy-sub">5. Review process</h3>
+        <p>Submissions undergo a <strong>two-round review</strong>. In Round 1, reviewers evaluate the abstract and provide feedback. In Round 2, you submit a revised version after addressing the feedback, following which a final selection decision is made. Feedback timelines follow the deadlines on the Important Dates / Call for Contributions sections.</p>
+        <h3 class="policy-sub">6. Withdrawal</h3>
+        <p>You may withdraw a submission at any time before the final decision by writing to <a href="mailto:{{ config.email }}">{{ config.email }}</a>.</p>
+      </article>
+
+      <article class="policy-block" id="others">
+        <h2 class="policy-title">Other Policies</h2>
+        <h3 class="policy-sub">Cookie Policy</h3>
+        <p>This website uses a single functional cookie — <code>session_token</code>, valid for 6 hours — to keep you logged in. It does not track you for advertising and contains no personally identifiable information beyond your session. You can clear it in your browser settings at any time; clearing it will simply log you out.</p>
+        <h3 class="policy-sub">Visa & Invitation Letter (International Participants)</h3>
+        <p>Invitation letters for visa purposes are issued only after a submission is <strong>selected</strong> and the registration fee in full or part is <strong>paid</strong>. Please allow up to X working days after request. An invitation letter <strong>does not guarantee a visa</strong>; visa decisions rest solely with the issuing authorities. For assistance, write to <a href="mailto:{{ config.email }}">{{ config.email }}</a>.</p>
+        <h3 class="policy-sub">Accessibility</h3>
+        <p>We aim for this website to meet Web Content Accessibility Guidelines (WCAG) — including keyboard navigation and screen-reader friendly markup. The Rajarhat Extension Centre venue provides ramps and other provisions for persons with disabilities. To request specific accommodation, contact the organisers during registration.</p>
+        <h3 class="policy-sub">Grievance Officer</h3>
+        <p>In compliance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, the Grievance Officer for this website is the Convener of {{ config.name }}:</p>
+        <p><strong>Dr. Manish Pandey</strong><br />Convener, {{ config.name }}<br />Department of Civil Engineering, IIT Kharagpur, Kharagpur — 721302, West Bengal, India<br /><a href="mailto:{{ config.email }}">{{ config.email }}</a></p>
+        <p>Grievances will be acknowledged promptly and addressed within 30 days of receipt.</p>
+      </article>
+
+    </div>
+  </div>
+</section>
+{% endblock %}

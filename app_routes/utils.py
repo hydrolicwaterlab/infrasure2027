@@ -86,7 +86,7 @@ FLASH = {
 }
 
 TYPE_LABELS = {"ppt": "PPT", "poster": "Poster"}
-MODE_LABELS = {"in_person": "In person", "online": "Online"}
+MODE_LABELS = {"in_person": "In person"}
 STATUS_LABELS = {
     "pending": "Pending review",
     "under_review": "Under review",

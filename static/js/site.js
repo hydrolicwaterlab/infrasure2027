@@ -30,4 +30,28 @@
       if (window.innerWidth > 980) close();
     });
   }
+
+  // Policies page — highlight currently visible section in the "On this page" list
+  const toc = document.querySelector(".policy-toc");
+  if (toc) {
+    const links = [...toc.querySelectorAll("a[href^='#']")];
+    const titles = document.querySelectorAll(".policy-block[id]");
+    if (links.length && titles.length) {
+      const onScroll = () => {
+        let current = titles[0].id;
+        const probe = window.scrollY + 110;
+        titles.forEach((el) => {
+          if (el.offsetTop <= probe) current = el.id;
+        });
+        links.forEach((a) => {
+          const active = a.getAttribute("href") === `#${current}`;
+          a.classList.toggle("is-active", active);
+          if (active) a.setAttribute("aria-current", "true");
+          else a.removeAttribute("aria-current");
+        });
+      };
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+    }
+  }
 })();

@@ -14,7 +14,7 @@ DEGREE_UG = ("BTech", "BE", "BSc", "BA", "BArch", "BDes", "Other")
 DEGREE_PG = ("MTech", "ME", "MSc", "MA", "MBA", "MArch", "MDes", "Other")
 ACADEMIC_ROLE = ("Postdoc", "Early Career Researcher", "Professor")
 PROFESSOR_TYPE = ("Assistant Professor", "Associate Professor", "Professor")
-PARTICIPATION_MODES = ("in_person", "online")
+PARTICIPATION_MODES = ("in_person",)
 REVIEW_DECISIONS = ("selected", "not_selected")
 ADMIN_REG_STATUS = ("approved", "rejected")
 
@@ -126,11 +126,14 @@ class _AccountBase(BaseModel):
 
 class RegisterForm(_AccountBase):
     confirm: str = ""
+    agree: str = ""
 
     @model_validator(mode="after")
     def _match(self):
         if self.password != self.confirm:
             raise ValueError("Passwords do not match.")
+        if self.agree not in ("on", "true", "1"):
+            raise ValueError("Please accept the Terms and Conditions to create an account.")
         return self
 
 
@@ -390,7 +393,7 @@ class AttendanceForm(BaseModel):
     @classmethod
     def _mode(cls, v: str) -> str:
         if v not in PARTICIPATION_MODES:
-            raise ValueError("Please choose in-person or online participation.")
+            raise ValueError("Please choose in-person participation.")
         return v
 
     @model_validator(mode="after")
