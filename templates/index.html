@@ -67,27 +67,67 @@
   </div>
 </section>
 
-<!-- 3. ABOUT -->
+<!-- 3. ABOUT — IIT KGP / CIVIL DEPT / CONFERENCE (ordered as requested) -->
 <section class="section" id="about">
   <div class="container">
     <header class="section-head">
-      <p class="eyebrow"><span class="eyebrow-num">01</span> — About the Conference</p>
-      <h2 class="display">Infrastructure for a changing world.</h2>
+      <p class="eyebrow"><span class="eyebrow-num">01</span> — About</p>
     </header>
-    <div class="about-grid">
-      <p class="about-lead">{{ config.about_headline }}</p>
-      <div class="about-body">
-        <p>{{ config.about_text }}</p>
+
+    <!-- 3a. ABOUT IIT KGP -->
+    <div class="about-feature" id="about-iitkgp">
+      <div class="about-feature-text">
+        <p class="eyebrow eyebrow--sub">{{ config.about_iitkgp.eyebrow }}</p>
+        <h3 class="about-feature-title">{{ config.about_iitkgp.title }}</h3>
+        <blockquote class="about-motto">
+          <span class="about-motto-sa">{{ config.about_iitkgp.motto_sanskrit }}</span>
+          <span class="about-motto-en">“{{ config.about_iitkgp.motto_translation }}”</span>
+          <cite>— {{ config.about_iitkgp.motto_source }}</cite>
+        </blockquote>
+        <p>{{ config.about_iitkgp.text }}</p>
+        <p class="about-feature-detail">{{ config.about_iitkgp.motto_detail }}</p>
+      </div>
+      <figure class="about-feature-media">
+        <img src="{{ config.about_iitkgp.image }}" alt="{{ config.about_iitkgp.image_alt }}" loading="lazy" />
+      </figure>
+    </div>
+
+    <!-- 3b. ABOUT CIVIL DEPARTMENT -->
+    <div class="about-feature about-feature--reverse" id="about-civil">
+      <div class="about-feature-text">
+        <p class="eyebrow eyebrow--sub">{{ config.about_civil.eyebrow }}</p>
+        <h3 class="about-feature-title">{{ config.about_civil.title }}</h3>
+        <p class="about-feature-subtitle">{{ config.about_civil.subtitle }}</p>
+        <p>{{ config.about_civil.text }}</p>
+        <p>{{ config.about_civil.text2 }}</p>
+      </div>
+      <figure class="about-feature-media about-feature-media--contain">
+        <img src="{{ config.about_civil.image }}" alt="{{ config.about_civil.image_alt }}" loading="lazy" />
+      </figure>
+    </div>
+
+    <hr class="about-divider" />
+
+    <!-- 3c. ABOUT THE CONFERENCE — Infrastructure for a changing world -->
+    <div class="about-conference" id="about-conference">
+      <p class="eyebrow eyebrow--sub">About the Conference</p>
+      <h3 class="about-conference-title display">Infrastructure for a changing world.</h3>
+      <div class="about-grid">
+        <p class="about-lead">{{ config.about_headline }}</p>
+        <div class="about-body">
+          <p>{{ config.about_text }}</p>
+        </div>
+      </div>
+      <div class="pillars">
+        {% for p in config.pillars %}
+          <div class="pillar">
+            <h3>{{ p.title }}</h3>
+            <p>{{ p.text }}</p>
+          </div>
+        {% endfor %}
       </div>
     </div>
-    <div class="pillars">
-      {% for p in config.pillars %}
-        <div class="pillar">
-          <h3>{{ p.title }}</h3>
-          <p>{{ p.text }}</p>
-        </div>
-      {% endfor %}
-    </div>
+
   </div>
 </section>
 

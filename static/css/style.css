@@ -547,8 +547,95 @@ section[id], footer[id] { scroll-margin-top: 88px; }
 }
 
 /* ==========================================================================
-   About
+   About — IIT KGP / Civil Dept / Conference (stacked)
    ========================================================================== */
+.about-feature {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 56px;
+  align-items: center;
+  margin-bottom: 72px;
+}
+.about-feature--reverse {
+  grid-template-columns: .85fr 1.15fr;
+}
+.about-feature--reverse .about-feature-media { order: -1; }
+.about-feature--reverse .about-feature-text { order: 1; }
+.about-feature-text p { color: var(--muted); font-size: 1.16rem; line-height: 1.75; }
+.about-feature-text p + p { margin-top: 14px; }
+.eyebrow--sub { margin-bottom: 10px; font-size: .74rem; }
+.about-feature-title {
+  font-size: clamp(1.3rem, 1.9vw, 1.65rem);
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+  white-space: nowrap;
+}
+.about-feature-subtitle {
+  font-family: var(--font-head);
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--green-900);
+  margin-bottom: 14px;
+}
+.about-motto {
+  border-left: 3px solid var(--color-accent);
+  padding: 12px 18px;
+  margin: 0 0 18px;
+  background: var(--white);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.about-motto-sa {
+  display: block;
+  font-family: var(--font-head);
+  font-size: 1.28rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: .02em;
+}
+.about-motto-en {
+  display: block;
+  margin-top: 4px;
+  font-style: italic;
+  color: var(--ink);
+  font-size: 1.08rem;
+}
+.about-motto cite {
+  display: block;
+  margin-top: 6px;
+  font-style: normal;
+  font-size: .82rem;
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+.about-feature-detail { font-size: 1.08rem !important; color: var(--muted); }
+.about-feature-media {
+  margin: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-media);
+  background: var(--white);
+}
+.about-feature-media img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+.about-feature-media--contain { background: transparent; border: none; box-shadow: var(--shadow-media); }
+.about-feature-media--contain img { object-fit: cover; padding: 0; aspect-ratio: 4 / 3; background: transparent; }
+.about-divider {
+  border: none;
+  height: 1px;
+  background: var(--line);
+  margin: 8px 0 56px;
+}
+.about-conference .about-conference-title {
+  margin: 0 0 8px;
+  font-size: clamp(1.65rem, 3vw, 2.35rem);
+}
 .about-grid {
   display: grid;
   grid-template-columns: 5fr 7fr;
@@ -926,10 +1013,11 @@ section[id], footer[id] { scroll-margin-top: 88px; }
 /* ==========================================================================
    Responsive
    ========================================================================== */
- @media (max-width: 1100px) {
-   .format-grid, .submit-top, .dates-grid { gap: 56px; }
-   .obj-list { column-gap: 48px; }
- }
+@media (max-width: 1100px) {
+    .format-grid, .submit-top, .dates-grid { gap: 56px; }
+    .obj-list { column-gap: 48px; }
+    .about-feature-title { white-space: normal; }
+  }
 
  @media (max-width: 980px) {
    .nav-links, .nav-actions { display: none; }
@@ -951,8 +1039,13 @@ section[id], footer[id] { scroll-margin-top: 88px; }
    .hero-meta { margin-top: 22px; }
    .hero-cta { margin-top: 32px; }
 
-   .about-grid { grid-template-columns: 1fr; gap: 24px; }
-   .format-grid, .submit-top, .dates-grid { grid-template-columns: 1fr; gap: 56px; }
+     .about-feature, .about-feature--reverse { grid-template-columns: 1fr; gap: 32px; }
+     .about-feature-title { white-space: normal; }
+     .about-feature-media { order: -1; }
+     .about-feature--reverse .about-feature-media { order: -1; }
+     .about-feature-media img { aspect-ratio: 16 / 10; }
+    .about-grid { grid-template-columns: 1fr; gap: 24px; }
+    .format-grid, .submit-top, .dates-grid { grid-template-columns: 1fr; gap: 56px; }
    .footer-grid { grid-template-columns: 1fr 1fr; }
  }
 

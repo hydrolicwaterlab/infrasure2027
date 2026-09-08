@@ -21,6 +21,47 @@ SITE_CONFIG = {
         "A high-energy, idea-driven forum where science meets practice, "
         "technology meets policy, and innovation meets responsibility."
     ),
+    "about_iitkgp": {
+        "eyebrow": "About IIT Kharagpur",
+        "title": "Dedicated to the service of the Nation",
+        "motto_sanskrit": "योगः कर्मसु कौशलम्",
+        "motto_translation": "Excellence in action is Yoga",
+        "motto_source": "Bhagavad Gita — Sri Krishna's discourse with Arjuna",
+        "text": (
+            "IIT Kharagpur, established in 1951, is the first and largest of the IITs. "
+            "Its motto \"योगः कर्मसु कौशलम्\" — \"Excellence in action is Yoga\" — urges "
+            "equanimity and focus on the task before us, the source of perfection in "
+            "endeavour that leads to service of the Nation."
+        ),
+        "motto_detail": (
+            "In the larger context of the Gita, the quote urges man to acquire equanimity "
+            "because a mind of equanimity allows a man to shed distracting thoughts of the "
+            "effects of his deeds and concentrate on the task before him. Equanimity is the "
+            "source of perfection in Karmic endeavours that leads to Salvation."
+        ),
+        "image": "/media/iitkgp.JPG",
+        "image_alt": "IIT Kharagpur main building",
+    },
+    "about_civil": {
+        "eyebrow": "About the Host Department",
+        "title": "Department of Civil Engineering, IIT Kharagpur",
+        "subtitle": "One of the oldest Departments in the Institute — since 1951",
+        "text": (
+            "The Civil Engineering department is one of the oldest Departments in the "
+            "Institute with its beginning in 1951. The department has been involved in "
+            "areas of Soil Mechanics, Transportation Engineering, Hydraulics and Structures "
+            "and Environmental Engineering."
+        ),
+        "text2": (
+            "Sponsored and consultancy projects undertaken by the department include Disaster "
+            "Mitigation & Management, Analysis, Evaluation and Design of Highway and Airport "
+            "pavements, Non-destructive Evaluation and Restoration of various structures such "
+            "as buildings and bridges, Process Modifications for pollution mitigation, Ground "
+            "Improvement and Sediment Transport and Scour studies."
+        ),
+        "image": "/media/civildept.png",
+        "image_alt": "Department of Civil Engineering, IIT Kharagpur",
+    },
     "about_text": (
         "Climate change, rapid urbanization, population growth, and increasing pressure on "
         "natural resources are creating unprecedented challenges for civil infrastructure and "

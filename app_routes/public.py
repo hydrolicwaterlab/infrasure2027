@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse
 
 from app_routes.service import announcements_list, ensure_default_categories, faq_groups
+from app_routes.utils import flash_text
 from auth import user_from_request
 from site_config import BASE_DIR, SITE_CONFIG, templates
 
