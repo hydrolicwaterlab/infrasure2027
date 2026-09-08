@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Review submission — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Reviewer · Round 1</p>
+    <h1 class="display display-on-dark">{{ sub.title }}</h1>
+    <p class="page-head-sub">Send feedback, questions, or requested changes. Do not select anything — the theme incharge makes the final decision after the student's Round&nbsp;2.</p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container review-grid">
+    <div class="panel review-sub">
+      <div class="review-meta">
+        {{ ui.type_badge(sub.submission_type) }}
+        <span class="badge badge-type">{{ sub.theme }} · {{ ui.theme_name(sub.theme, config.themes) }}</span>
+        {{ ui.round_badge(1) }}
+      </div>
+      <h2 class="review-head">Submission</h2>
+      <dl class="reg-dl">
+        <dt>Student</dt><dd>{{ (students.get(sub.user_id) or {}).get("name", "—") or "—" }}</dd>
+        <dt>Email</dt><dd>{{ (students.get(sub.user_id) or {}).get("email", "—") or "—" }}</dd>
+        <dt>Submitted</dt><dd>{{ (sub.created_at or "")[:10] }}</dd>
+      </dl>
+      <h3 class="review-head">Abstract</h3>
+      <p class="review-abstract">{{ sub.description }}</p>
+    </div>
+
+    <div class="panel form-card review-form">
+      {% include "_form_errors.html" %}
+      <form method="post" action="/reviewer/review/{{ sub.id }}" novalidate>
+        <div class="field">
+          <label for="comment">Your feedback / questions / requested changes</label>
+          <textarea id="comment" name="comment" rows="8" maxlength="1000" placeholder="Constructive, specific feedback the student can act on in Round 2…" required>{{ values.comment or "" }}</textarea>
+          <p class="field-hint">The student will see this and submit a revised Round 2 for the theme incharge's final decision.</p>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary btn-lg" type="submit">Send feedback</button>
+          <a class="btn btn-ghost btn-lg" href="/reviewer/dashboard">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

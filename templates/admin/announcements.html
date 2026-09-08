@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Announcements — Admin — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Admin · Announcements</p>
+    <h1 class="display display-on-dark">Announcements.</h1>
+    <p class="page-head-sub">Publish updates that appear in the announcements section on the <a href="/#announcements">homepage</a>.</p>
+  </div>
+</section>
+
+<section class="dash-section">
+  <div class="container">
+    <div class="admin-top">{{ ui.admin_nav("announcements") }}</div>
+
+    <div class="form-card panel">
+      {% include "_form_errors.html" %}
+      <h2 class="panel-title">New announcement</h2>
+      <form method="post" action="/admin/announcements/create" class="form-grid" novalidate>
+        <div class="field">
+          <label for="title">Title</label>
+          <input type="text" id="title" name="title" maxlength="160" value="{{ values.title or '' }}" placeholder="e.g. Submission deadline extended to …" required />
+        </div>
+        <div class="field">
+          <label for="body">Body</label>
+          <textarea id="body" name="body" rows="4" maxlength="4000" placeholder="Full announcement text…" required>{{ values.body or '' }}</textarea>
+          <p class="field-hint">New announcements are shown on the homepage until you toggle them off.</p>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Publish announcement</button></div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2 class="panel-title">Published announcements</h2></div>
+      {% if entries %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Title</th><th>Created</th><th>Homepage</th><th class="th-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in entries %}
+                <tr>
+                  <td>
+                    <span class="cell-title">{{ a.title }}</span>
+                    <small class="cell-sub">{{ a.body | truncate(120) }}</small>
+                  </td>
+                  <td>{{ (a.created_at or "")[:10] }}</td>
+                  <td>
+                    {% if a.show_on_home %}
+                      <span class="badge badge-selected">Shown</span>
+                    {% else %}
+                      <span class="badge badge-none">Hidden</span>
+                    {% endif %}
+                  </td>
+                  <td class="cell-actions">
+                    <form class="row-form" method="post" action="/admin/announcements/{{ a.id }}/toggle">
+                      <button class="btn btn-sm btn-outline" type="submit">{{ "Hide from home" if a.show_on_home else "Show on home" }}</button>
+                    </form>
+                    <details class="reset-box edit-box">
+                      <summary class="btn btn-sm btn-ghost">Edit</summary>
+                      <form method="post" action="/admin/announcements/{{ a.id }}/edit" class="reset-form inline-edit">
+                        <input type="text" name="title" value="{{ a.title }}" required maxlength="160" />
+                        <textarea name="body" rows="3" required maxlength="4000">{{ a.body }}</textarea>
+                        <button class="btn btn-sm btn-primary" type="submit">Save</button>
+                      </form>
+                    </details>
+                    <form class="row-form" method="post" action="/admin/announcements/{{ a.id }}/delete"
+                          onsubmit="return confirm('Delete this announcement permanently?');">
+                      <button class="btn btn-sm btn-ghost" type="submit">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ ui.empty_state("No announcements yet", "Publish your first announcement with the form above.", None) }}
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

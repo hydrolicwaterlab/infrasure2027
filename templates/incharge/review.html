@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}{{ "Round 1 feedback" if mode == "feedback" else "Final decision" }} — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Review · {{ sub.id }}</p>
+    <h1 class="display display-on-dark">{{ sub.title }}</h1>
+    <p class="page-head-sub">
+      {% if mode == "feedback" %}
+        Send the student feedback, questions, or requested changes. No selection yet — decide after Round 2.
+      {% elif user.role == "master_admin" %}
+        Decide Selected or Rejected on Round 2 — your decision overrides the theme incharge.
+      {% else %}
+        Compare Round 1, the feedback, and Round 2, then decide Selected or Rejected.
+      {% endif %}
+    </p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container review-grid">
+    <div class="panel review-sub">
+      {{ ui.submission_detail(sub, students, themes) }}
+      {% if thread | length > 1 and mode == "decision" %}
+        <h3 class="review-head">Round 1 vs Round 2</h3>
+        {{ ui.thread_compare(thread[0], thread[-1]) }}
+      {% endif %}
+    </div>
+
+    <div class="panel form-card review-form">
+      {% include "_form_errors.html" %}
+      {% if mode == "feedback" %}
+        <form method="post" action="/incharge/review/{{ sub.id }}" novalidate>
+          <div class="field">
+            <label for="comment">Feedback / questions / requested changes</label>
+            <textarea id="comment" name="comment" rows="8" maxlength="1000" placeholder="The student will address this in Round 2…" required>{{ values.comment or "" }}</textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary btn-lg" type="submit">Send feedback</button>
+            <a class="btn btn-ghost btn-lg" href="{{ back_url }}">Cancel</a>
+          </div>
+        </form>
+      {% else %}
+        <form method="post" action="/incharge/review/{{ sub.id }}" novalidate>
+          <fieldset class="form-block">
+            <legend class="form-legend">Your decision</legend>
+            <p class="side-note">Compare Round 1, the feedback, and Round 2, then choose.</p>
+            <div class="form-actions form-actions-stack">
+              <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="selected">Selected — accept for presentation</button>
+              <button class="btn btn-danger btn-lg btn-block" type="submit" name="decision" value="not_selected"
+                      onclick="return confirm('Reject this presentation? The student will see the outcome and cannot resubmit.')">Rejected</button>
+            </div>
+          </fieldset>
+          <div class="field">
+            <label for="comment">Feedback (shown to the student)</label>
+            <textarea id="comment" name="comment" rows="5" maxlength="1000" placeholder="Optional — short, constructive feedback…">{{ values.comment or "" }}</textarea>
+          </div>
+          <div class="form-actions">
+            <a class="btn btn-ghost btn-lg" href="{{ back_url }}">Cancel</a>
+          </div>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

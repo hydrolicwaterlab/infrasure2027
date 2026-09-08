@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="{{ config.tagline }} — {{ config.organizer }}, IIT Kharagpur. {{ config.dates }}." />
+  <title>{% block title %}{{ config.name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="/media/infra_logo.png" />
+  <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" />
+  <script src="{{ url_for('static', path='/js/hero_slideshow.js') }}" defer></script>
+  <script src="{{ url_for('static', path='/js/site.js') }}" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header" id="site-header">
+    <div class="nav-wrap">
+      <img src="/media/iit_kgp_logo.webp" alt="IIT Kharagpur" class="brand-emblem" />
+      <a class="brand" href="/" aria-label="{{ config.name }} — home">
+        <img src="/media/infra_logo.png" alt="{{ config.name }} logo" class="brand-logo" />
+        <span class="brand-text">
+          <strong>{{ config.short_title }}</strong>
+          <small>IIT Kharagpur</small>
+        </span>
+      </a>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a href="/#about">About</a>
+        <a href="/#objectives">Objectives</a>
+        <a href="/#themes">Themes</a>
+        <a href="/#submit">Submit</a>
+        <a href="/#register">Register</a>
+<a href="/#announcements">Announcements</a>
+        <a href="/#faq">FAQ</a>
+        <a href="#contact">Contact</a>
+      </nav>
+
+      <div class="nav-actions">
+        {% if current_user %}
+          {% set role = current_user.role %}
+          {% if role == "student" %}
+            <a class="btn btn-sm btn-primary" href="/student/dashboard">My Dashboard</a>
+          {% elif role == "theme_incharge" %}
+            <a class="btn btn-sm btn-primary" href="/incharge/dashboard">Incharge Panel</a>
+          {% elif role == "reviewer" %}
+            <a class="btn btn-sm btn-primary" href="/reviewer/dashboard">Reviewer Panel</a>
+          {% else %}
+            <a class="btn btn-sm btn-primary" href="/admin/dashboard">Admin Panel</a>
+          {% endif %}
+          <a class="btn btn-sm btn-ghost" href="/logout">Logout</a>
+        {% else %}
+          <a class="btn btn-sm btn-outline btn-disabled-temp" href="/login" title="Registration will start soon" aria-disabled="true" tabindex="-1">Login</a>
+          <a class="btn btn-sm btn-primary btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register</a>
+        {% endif %}
+      </div>
+
+      <img src="/media/75th_logo.png" alt="IIT Kharagpur Platinum Jubilee — 75 Years" class="brand-jubilee" />
+
+      <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="mobile-nav">
+        <span class="nav-toggle-box" aria-hidden="true">
+          <span class="nav-toggle-line"></span>
+          <span class="nav-toggle-line"></span>
+          <span class="nav-toggle-line"></span>
+        </span>
+        <span class="visually-hidden">Open menu</span>
+      </button>
+    </div>
+
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile">
+      <div class="container mobile-nav-inner">
+        <a class="mobile-link" href="/#about">About</a>
+        <a class="mobile-link" href="/#objectives">Objectives</a>
+        <a class="mobile-link" href="/#themes">Themes</a>
+        <a class="mobile-link" href="/#submit">Submit</a>
+        <a class="mobile-link" href="/#register">Register</a>
+        <a class="mobile-link" href="/#announcements">Announcements</a>
+        <a class="mobile-link" href="/#faq">FAQ</a>
+        <a class="mobile-link" href="#contact">Contact</a>
+        <div class="mobile-actions">
+          {% if current_user %}
+            {% set role = current_user.role %}
+            {% if role == "student" %}
+              <a class="btn btn-primary" href="/student/dashboard">My Dashboard</a>
+            {% elif role == "theme_incharge" %}
+              <a class="btn btn-primary" href="/incharge/dashboard">Incharge Panel</a>
+            {% elif role == "reviewer" %}
+              <a class="btn btn-primary" href="/reviewer/dashboard">Reviewer Panel</a>
+            {% else %}
+              <a class="btn btn-primary" href="/admin/dashboard">Admin Panel</a>
+            {% endif %}
+            <a class="btn btn-outline" href="/logout">Logout</a>
+          {% else %}
+            <a class="btn btn-outline btn-disabled-temp" href="/login" title="Registration will start soon" aria-disabled="true" tabindex="-1">Login</a>
+            <a class="btn btn-primary btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register</a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  {% if error %}
+    <div class="flash flash-error" role="alert">{{ error }}</div>
+  {% endif %}
+  {% if success %}
+    <div class="flash flash-success" role="status">{{ success }}</div>
+  {% endif %}
+
+  <main id="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer" id="contact">
+    <div class="container footer-grid">
+      <div>
+        <div class="footer-brand">
+          <img src="/media/infra_logo.png" alt="{{ config.name }} logo" class="footer-logo" />
+          <span class="footer-brand-text">
+            <strong>{{ config.short_title }}</strong>
+            <small>{{ config.tagline }}</small>
+          </span>
+        </div>
+        <p class="footer-jubilee">{{ config.jubilee }}</p>
+      </div>
+      <div>
+        <h4>Conference</h4>
+        <p class="footer-hi">{{ config.dates }}</p>
+        <p>{{ config.venue }}</p>
+      </div>
+      <div>
+        <h4>Organized by</h4>
+        <p>{{ config.organizer }}</p>
+        <p>Indian Institute of Technology Kharagpur</p>
+        <p>Convener: {{ config.convener }}</p>
+        <p><a href="mailto:{{ config.email }}">{{ config.email }}</a></p>
+      </div>
+      <div>
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="/register" class="btn-disabled-temp" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register Now</a></li>
+          <li><a href="/login" class="btn-disabled-temp" title="Registration will start soon" aria-disabled="true" tabindex="-1">Login</a></li>
+          <li><a href="/#announcements">Announcements</a></li>
+          <li><a href="/#faq">FAQ</a></li>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/#themes">Themes</a></li>
+          <li><a href="/#submit">Call for Contributions</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; 2027 {{ config.name }} · {{ config.organizer }}. All rights reserved.</p>
+      <p>{{ config.address }}</p>
+    </div>
+  </footer>
+</body>
+</html>

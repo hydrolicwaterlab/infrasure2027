@@ -1,0 +1,209 @@
+{# ---- Shared UI macros (incharge / admin / student) ---- #}
+
+{% macro theme_name(label, themes) -%}
+  {%- set ns = namespace(name=label) -%}
+  {%- for t in themes if t.label == label and t.name -%}
+    {%- set ns.name = t.name -%}
+  {%- endfor -%}
+  {{ ns.name }}
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+  {%- set map = {"pending": ("Pending review", "pending"), "under_review": ("Under review", "under_review"),
+                 "feedback_given": ("Feedback sent", "feedback_given"),
+                 "superseded": ("Round 1 complete", "superseded"),
+                 "awaiting_decision": ("Awaiting decision", "awaiting_decision"),
+                 "selected": ("Selected", "selected"),
+                 "not_selected": ("Not selected", "not_selected"), "approved": ("Approved", "approved"),
+                 "rejected": ("Rejected", "rejected"),
+                 "reviewer_done": ("Reviewer feedback ready", "reviewer_done"),
+                 "revision_requested": ("Revision requested", "revision_requested"),
+                 "revised": ("Revised", "revised")} -%}
+  {%- set row = map.get(status) or (status, status) -%}
+  <span class="badge badge-{{ row[1] }}">{{ row[0] }}</span>
+{%- endmacro %}
+
+{% macro round_badge(round_no) -%}
+  <span class="badge badge-round-{{ round_no }}">Round {{ round_no }}</span>
+{%- endmacro %}
+
+{% macro type_badge(t) -%}
+  <span class="badge badge-type">{{ "PPT" if t == "ppt" else "Poster" }}</span>
+{%- endmacro %}
+
+{% macro mode_badge(m) -%}
+  <span class="badge badge-neutral">{{ {"in_person": "In person", "online": "Online"}.get(m, m) }}</span>
+{%- endmacro %}
+
+{% macro active_badge(user) -%}
+  <span class="badge {{ 'badge-selected' if user.active else 'badge-not_selected' }}">{{ "Active" if user.active else "Deactivated" }}</span>
+{%- endmacro %}
+
+{% macro empty_state(title, text, href=None, cta=None) -%}
+  <div class="empty-state">
+    <p class="empty-title">{{ title }}</p>
+    <p>{{ text }}</p>
+    {%- if href and cta %}
+    <a class="btn btn-primary" href="{{ href }}">{{ cta }}</a>
+    {%- endif %}
+  </div>
+{%- endmacro %}
+
+{% macro filter_form(base_url, themes, selected_theme="", selected_status="", selected_type="", selected_round="") -%}
+  <form method="get" action="{{ base_url }}" class="filter-bar">
+    <label class="field f-inline">
+      <span>Theme</span>
+      <select name="theme">
+        <option value="">All themes</option>
+        {% for t in themes %}
+          <option value="{{ t.label }}" {% if selected_theme == t.label %}selected{% endif %}>{{ t.label }} — {{ t.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="field f-inline">
+      <span>Round</span>
+      <select name="round">
+        <option value="">All</option>
+        <option value="1" {% if selected_round == "1" %}selected{% endif %}>Round 1</option>
+        <option value="2" {% if selected_round == "2" %}selected{% endif %}>Round 2</option>
+      </select>
+    </label>
+    <label class="field f-inline">
+      <span>Status</span>
+      <select name="status">
+        <option value="">All</option>
+        {% for key, label in [("pending", "Pending review"), ("under_review", "Under review"),
+                                ("feedback_given", "Feedback sent"), ("awaiting_decision", "Awaiting decision"),
+                                ("selected", "Selected"), ("not_selected", "Not selected")] %}
+          <option value="{{ key }}" {% if selected_status == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="field f-inline">
+      <span>Format</span>
+      <select name="type">
+        <option value="">All</option>
+        {% for key, label in [("ppt", "PPT"), ("poster", "Poster")] %}
+          <option value="{{ key }}" {% if selected_type == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="btn btn-primary btn-sm" type="submit">Filter</button>
+    <a class="btn btn-ghost btn-sm" href="{{ base_url }}">Clear</a>
+  </form>
+{%- endmacro %}
+
+{% macro subs_table(subs, themes, empty_title, empty_text, empty_href=None, empty_cta=None, view_prefix="") -%}
+  {% if subs %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Format</th><th>Theme</th><th>Student</th><th>Title</th><th>Reviewer</th><th>Status</th><th>Submitted</th><th class="th-actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in subs %}
+            <tr>
+              <td>{{ type_badge(s.submission_type) }}<div class="round-tag">{{ round_badge(s.get("round", 1)) }}</div></td>
+              <td><span class="theme-label">{{ s.theme }}</span><small class="cell-sub">{{ theme_name(s.theme, themes) }}</small></td>
+              <td>{{ s._student }}</td>
+              <td>
+                {% if view_prefix %}
+                  <a class="cell-title cell-title-link" href="{{ view_prefix }}/{{ s.id }}">{{ s.title }}</a>
+                {% else %}
+                  <span class="cell-title">{{ s.title }}</span>
+                {% endif %}
+                <small class="cell-sub">{{ s.description | truncate(110) }}</small>
+              </td>
+              <td>{{ s._reviewer or "—" }}</td>
+              <td>{{ status_badge(s.status) }}</td>
+              <td>{{ (s.created_at or "")[:10] }}</td>
+              <td class="cell-actions">
+                {% for a in s._actions %}
+                  <a class="btn btn-sm {{ a.get('cls', 'btn-outline') }}" href="{{ a.url }}">{{ a.label }}</a>
+                {% endfor %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ empty_state(empty_title, empty_text, empty_href, empty_cta) }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro submission_detail(sub, students, themes) -%}
+  <div class="review-meta">
+    {{ type_badge(sub.submission_type) }}
+    <span class="badge badge-type">{{ sub.theme }} · {{ theme_name(sub.theme, themes) }}</span>
+  </div>
+  <h2 class="review-head">Submission</h2>
+  <dl class="reg-dl">
+    <dt>Student</dt><dd>{{ (students.get(sub.user_id) or {}).get("name", "—") or "—" }}</dd>
+    <dt>Email</dt><dd>{{ (students.get(sub.user_id) or {}).get("email", "—") or "—" }}</dd>
+    <dt>Submitted</dt><dd>{{ (sub.created_at or "")[:10] }}</dd>
+    <dt>Round</dt><dd>{{ round_badge(sub.get("round", 1)) }} {{ status_badge(sub.status) }}</dd>
+    {% if sub.reviewed_by %}
+      <dt>Decided by</dt><dd>{{ (students.get(sub.reviewed_by) or {}).get("name", "—") or "—" }} · {{ (sub.reviewed_at or "")[:10] }}</dd>
+    {% endif %}
+  </dl>
+  <h3 class="review-head">Abstract — Round {{ sub.get("round", 1) }}</h3>
+  <p class="review-abstract">{{ sub.description }}</p>
+
+  {% if sub.get("round", 1) == 1 %}
+    {% if sub.assigned_reviewer_id %}
+      <div class="sub-review">
+        <p class="sub-review-label">
+          Reviewer — {{ (students.get(sub.assigned_reviewer_id) or {}).get("name", "—") or "—" }}
+          {% if sub.reviewer_reviewed_at %}
+            <span class="badge badge-selected">Feedback sent · {{ sub.reviewer_reviewed_at[:10] }}</span>
+          {% else %}
+            <span class="badge badge-neutral">Not yet reviewed</span>
+          {% endif %}
+        </p>
+        {% if sub.reviewer_comment %}
+          <p class="review-quote">“{{ sub.reviewer_comment }}”</p>
+        {% else %}
+          <p class="side-note">No feedback yet.</p>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="side-note">No reviewer assigned yet.</p>
+    {% endif %}
+  {% else %}
+    {% if sub.review_comment %}
+      <div class="sub-review sub-review-final">
+        <p class="sub-review-label">Incharge decision — {{ status_badge(sub.status) }}</p>
+        <p class="review-quote">“{{ sub.review_comment }}”</p>
+      </div>
+    {% endif %}
+  {% endif %}
+{%- endmacro %}
+
+{% macro thread_compare(r1, r2) -%}
+  <div class="thread-compare">
+    <div class="thread-col">
+      <p class="thread-col-title">{{ round_badge(1) }} <span>First submission {% if r1.status != "pending" %}(locked){% endif %}</span></p>
+      <p class="review-abstract">{{ r1.description }}</p>
+    </div>
+    <div class="thread-col is-current">
+      <p class="thread-col-title">{{ round_badge(2) }} <span>Submitted after feedback</span></p>
+      <p class="review-abstract">{{ r2.description }}</p>
+    </div>
+  </div>
+{%- endmacro %}
+
+{% macro admin_nav(active) -%}
+  <div class="subnav" aria-label="Admin sections">
+    <a class="subnav-link {{ 'is-active' if active == 'dashboard' }}" href="/admin/dashboard">Overview</a>
+    <a class="subnav-link {{ 'is-active' if active == 'submissions' }}" href="/admin/submissions">Submissions</a>
+    <a class="subnav-link {{ 'is-active' if active == 'registrations' }}" href="/admin/registrations">Registrations</a>
+    <a class="subnav-link {{ 'is-active' if active == 'users' }}" href="/admin/users">Users</a>
+    <a class="subnav-link {{ 'is-active' if active == 'incharges' }}" href="/admin/incharges">Incharges</a>
+    <a class="subnav-link {{ 'is-active' if active == 'reviewers' }}" href="/admin/reviewers">Reviewers</a>
+    <a class="subnav-link {{ 'is-active' if active == 'announcements' }}" href="/admin/announcements">Announcements</a>
+    <a class="subnav-link {{ 'is-active' if active == 'faqs' }}" href="/admin/faqs">FAQs</a>
+  </div>
+{%- endmacro %}

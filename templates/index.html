@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+
+{% block title %}{{ config.name }} — {{ config.tagline }}{% endblock %}
+
+{% block content %}
+
+<!-- 1. HERO — full-bleed cinematic -->
+<section class="hero">
+  <div class="hero-bg">
+    <div class="hero-slides">
+      {% for img in config.gallery %}
+        <div class="hero-slide{% if loop.first %} active{% endif %}" style="background-image: url('{{ img.src }}')" role="img" aria-label="{{ img.alt }}"></div>
+      {% endfor %}
+    </div>
+    <div class="hero-scrim" aria-hidden="true"></div>
+  </div>
+  <div class="hero-content">
+    <p class="hero-org">
+      <span>Department of Civil Engineering</span>
+      <span>Indian Institute of Technology Kharagpur</span>
+    </p>
+    <div class="hero-brand">
+      <img src="/media/infra_logo.png" alt="Infrasure — Civil Engineering, IIT Kharagpur" class="hero-logo hero-logo--inline" />
+      <h1 class="hero-title">INFRASURE 2027</h1>
+    </div>
+    <p class="hero-statement">Infrastructure sustainability.<br />Resilience for tomorrow.</p>
+    <div class="hero-meta">
+      <p class="hero-date">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M8 3v4M16 3v4M3 10h18" />
+        </svg>
+        {{ config.dates }}
+      </p>
+      <p class="hero-venue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 21s-7-5.4-7-11a7 7 0 1 1 14 0c0 5.6-7 11-7 11z" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg>
+        {{ config.venue.replace(", IIT", " · IIT", 1) }}
+      </p>
+    </div>
+    <div class="hero-cta">
+      <a class="btn btn-accent btn-lg hero-btn btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register now</a>
+      <a class="hero-link" href="#submit">Submit your work <span aria-hidden="true">&rarr;</span></a>
+    </div>
+    <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.9); text-shadow: 0 1px 8px rgba(0,0,0,.45);">Registration will start soon</p>
+  </div>
+</section>
+
+<!-- 2. AT A GLANCE -->
+<section class="glance" aria-label="Conference at a glance">
+  <div class="container glance-grid">
+    {% for f in config.key_facts %}
+      <div class="glance-item">
+        <span class="glance-value">
+          {%- if f.value.isdigit() -%}
+            {{ "%02d"|format(f.value|int) }}
+          {%- else -%}
+            {{ f.value }}
+          {%- endif -%}
+        </span>
+        <span class="glance-label">{{ f.label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- 3. ABOUT -->
+<section class="section" id="about">
+  <div class="container">
+    <header class="section-head">
+      <p class="eyebrow"><span class="eyebrow-num">01</span> — About the Conference</p>
+      <h2 class="display">Infrastructure for a changing world.</h2>
+    </header>
+    <div class="about-grid">
+      <p class="about-lead">{{ config.about_headline }}</p>
+      <div class="about-body">
+        <p>{{ config.about_text }}</p>
+      </div>
+    </div>
+    <div class="pillars">
+      {% for p in config.pillars %}
+        <div class="pillar">
+          <h3>{{ p.title }}</h3>
+          <p>{{ p.text }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- 4. OBJECTIVES -->
+<section class="section section-white" id="objectives">
+  <div class="container">
+    <header class="section-head">
+      <p class="eyebrow"><span class="eyebrow-num">02</span> — Objectives</p>
+      <h2 class="display">The primary objectives of {{ config.name }}</h2>
+    </header>
+    <ol class="obj-list">
+      {% for o in config.objectives %}
+        <li class="obj-item">
+          <span class="obj-num" aria-hidden="true">{{ "%02d"|format(loop.index) }}</span>
+          <p>{{ o }}</p>
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+</section>
+
+<!-- 5. THEMES -->
+<section class="section section-sage" id="themes">
+  <div class="container">
+    <header class="section-head">
+      <p class="eyebrow"><span class="eyebrow-num">03</span> — Core Themes</p>
+      <h2 class="display">Nine focus areas spanning sustainable civil and water engineering</h2>
+    </header>
+    <div class="theme-index">
+      {% for t in config.themes %}
+        <details class="theme-row">
+          <summary>
+            <span class="theme-num">{{ "%02d"|format(loop.index) }}</span>
+            <span class="theme-name">{{ t.name }}</span>
+            <span class="theme-count">{{ t.topics|length }} sub-themes</span>
+            <span class="theme-toggle">
+              <span class="lbl-open">View sub-themes</span>
+              <span class="lbl-close">Hide sub-themes</span>
+              <span class="theme-arrow" aria-hidden="true">&rarr;</span>
+            </span>
+          </summary>
+          <div class="theme-panel">
+            <ul class="theme-topics">
+              {% for topic in t.topics %}
+                <li>{{ topic }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- 6. CONFERENCE FORMAT -->
+<section class="section section-paper" id="format">
+  <div class="container">
+    <header class="section-head">
+      <p class="eyebrow"><span class="eyebrow-num">04</span> — Conference Format</p>
+      <h2 class="display">A 3-day blended structure for science, practice, and policy</h2>
+    </header>
+    <div class="format-grid">
+      <div class="format-main">
+        <h3 class="mini-head">Format Highlights</h3>
+        <ul class="rule-list">
+          {% for p in config.format_points %}
+            <li>{{ p }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <aside class="format-side">
+        <div>
+          <h3 class="mini-head">Target Participants</h3>
+          <ul class="rule-list rule-list-plain">
+            {% for p in config.participants %}
+              <li>{{ p }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div>
+          <h3 class="mini-head">Publications</h3>
+          <ul class="rule-list rule-list-plain">
+            {% for p in config.publications %}
+              <li>{{ p }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- 7. CALL FOR CONTRIBUTIONS -->
+<section class="submit-band" id="submit">
+  <div class="container">
+    <div class="submit-top">
+      <div class="submit-copy">
+        <p class="eyebrow"><span class="eyebrow-num">05</span> — Call for Contributions</p>
+        <h2 class="display display-on-dark">Share your research.<br />Shape resilient infrastructure.</h2>
+        <p class="submit-lead">Present at {{ config.name }} — PPT or Poster, up to 2 per student.</p>
+        <div class="submit-cta">
+          <a class="btn btn-accent btn-lg btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Submit your work <span aria-hidden="true">&rarr;</span></a>
+        </div>
+        <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.75);">Registration will start soon</p>
+      </div>
+      <ul class="submit-rules">
+        {% for r in config.submit_rules %}
+          <li>{{ r }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <ol class="submit-steps">
+      <li class="step">
+        <span class="step-num">01</span>
+        <h3>Create Account</h3>
+        <p>Create your account &amp; register for the conference</p>
+      </li>
+      <li class="step">
+        <span class="step-num">02</span>
+        <h3>Submit</h3>
+        <p>Apply with a PPT or Poster on any of the 9 themes</p>
+      </li>
+      <li class="step">
+        <span class="step-num">03</span>
+        <h3>Review</h3>
+        <p>Theme incharge reviews &amp; decides Selected / Not Selected</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- 8. CALL FOR PAPERS — IMPORTANT DATES -->
+<section class="section section-white" id="cfp">
+  <div class="container">
+    <header class="section-head">
+      <p class="eyebrow"><span class="eyebrow-num">06</span> — Call for Papers</p>
+      <h2 class="display">Important dates &amp; submission information</h2>
+    </header>
+    <div class="dates-grid">
+      <dl class="dates-list">
+        <div class="date-row">
+          <dt>Registration opens</dt>
+          <dd class="tba">To be announced</dd>
+        </div>
+        <div class="date-row">
+          <dt>PPT / Poster submission opens</dt>
+          <dd class="tba">To be announced</dd>
+        </div>
+        <div class="date-row">
+          <dt>Submission deadline</dt>
+          <dd class="tba">To be announced</dd>
+        </div>
+        <div class="date-row">
+          <dt>Intimation of acceptance</dt>
+          <dd class="tba">To be announced</dd>
+        </div>
+        <div class="date-row">
+          <dt>Conference dates</dt>
+          <dd class="date-hi">{{ config.dates }}</dd>
+        </div>
+        <div class="date-row">
+          <dt>Venue</dt>
+          <dd>{{ config.venue }}</dd>
+        </div>
+      </dl>
+      <aside class="dates-note">
+        <h3 class="mini-head">Submission information</h3>
+        <p>Contributions are invited as PPT or Poster presentations across the nine core themes. Each submission is reviewed by the respective theme incharge, who decides whether it is selected.</p>
+        <p class="dates-updated">Dates will be updated here as they are announced.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- 9. ANNOUNCEMENTS -->
+{% if announcements %}
+<section class="section" id="announcements">
+  <div class="container container-narrow">
+    <header class="section-head">
+      <p class="eyebrow"><span class="eyebrow-num">07</span> — News &amp; Updates</p>
+      <h2 class="display">Announcements</h2>
+    </header>
+    {% for a in announcements %}
+      <article class="panel ann-item">
+        <div class="ann-head">
+          <h3 class="ann-title">{{ a.title }}</h3>
+          {% if a.created_at %}<span class="ann-date">{{ a.created_at[:10] }}</span>{% endif %}
+        </div>
+        <div class="ann-body">{{ a.body }}</div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- 10. FAQ -->
+<section class="section section-paper" id="faq">
+  <div class="container container-narrow">
+    <header class="section-head">
+      <p class="eyebrow"><span class="eyebrow-num">08</span> — Help Centre</p>
+      <h2 class="display">Frequently asked questions</h2>
+      <p style="margin-top:12px;color:var(--muted);max-width:62ch;">Find answers about registration, submissions, selection, and payment for {{ config.name }}.</p>
+    </header>
+    {% set any_faq = faq_groups | selectattr("faqs") | list | length %}
+    {% if any_faq %}
+      {% for g in faq_groups %}
+        {% if g.faqs %}
+          <h3 class="faq-cat">{{ g.category.name }}</h3>
+          <div class="faq-list">
+            {% for f in g.faqs %}
+              <details class="faq-item">
+                <summary>
+                  <span class="faq-q">{{ f.question }}</span>
+                  <span class="faq-toggle" aria-hidden="true">+</span>
+                </summary>
+                <div class="faq-a">{{ f.answer }}</div>
+              </details>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="panel">
+        {{ ui.empty_state("No FAQs yet", "Questions and answers will appear here soon.") }}
+      </div>
+    {% endif %}
+    <p class="side-note faq-contact">Still have questions? Email <a href="mailto:{{ config.email }}">{{ config.email }}</a>.</p>
+  </div>
+</section>
+
+<!-- 11. REGISTRATION -->
+<section class="section section-navy" id="register">
+  <div class="container reg-inner">
+    <div class="reg-copy">
+      <h2 class="display">Register for the Conference</h2>
+      <p>Join researchers, engineers, policymakers, and students at {{ config.name }}.
+      Create your account, register your participation, and apply with a PPT or Poster.</p>
+    </div>
+    <div class="reg-cta">
+      <a class="btn btn-primary btn-lg btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register Now</a>
+      <a class="btn btn-outline btn-lg btn-disabled-temp" href="/login" title="Registration will start soon" aria-disabled="true" tabindex="-1">Already a member? Login</a>
+    </div>
+    <p class="register-soon-note" style="width:100%; margin-top:12px; text-align:center; color: rgba(255,255,255,.75);">Registration will start soon</p>
+  </div>
+</section>
+
+{% endblock %}

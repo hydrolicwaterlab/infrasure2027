@@ -1,0 +1,115 @@
+# INFRASURE 2027 — robots.txt
+# ========================================================================
+# ABOUT THIS WEBSITE
+# ------------------------------------------------------------------------
+# Site:        INFRASURE 2027 — International Conference on
+#              Infrastructure Sustainability and Resilience Forum
+# Organizer:   Department of Civil Engineering, IIT Kharagpur
+#              Platinum Jubilee Celebrations (est. 1951)
+# Convener:    Prof. Manish Pandey
+# Dates:       22 – 24 January 2027
+# Venue:       Rajarhat Extension Centre, IIT Kharagpur, Kolkata
+# Contact:     infrasure2027@civil.iitkgp.ac.in
+# Tagline:     International Conference on Infrastructure Sustainability
+#              and Resilience Forum — where science meets practice,
+#              technology meets policy, and innovation meets responsibility.
+# About:       Climate change, rapid urbanization, population growth and
+#              pressure on natural resources pose unprecedented challenges
+#              for civil infrastructure & water systems. INFRASURE 2027
+#              convenes researchers, industry, policymakers and students to
+#              advance sustainable, climate-resilient, nature-based solutions
+#              at local, regional and global scales.
+# Pillars:     Sustainable · Resilient · Nature-based Solutions
+# Themes:      9 core themes (Environmental Monitoring; Geohazards &
+#              Geotechnics; Hydraulic & Hydrologic Systems; Infrastructure
+#              Design; Pavement/Traffic/Transportation; Surveying &
+#              Geoinformatics; Future Construction Materials; Digital Twin
+#              & AI/ML; Energy Recovery) — see site_config.py
+# Purpose:     Conference information, call for PPT/Poster contributions
+#              (max 2 per student), two-round review, registration &
+#              peer-review portal. Public pages are crawlable
+# Generated:   2026-09-08 for INFRASURE 2027 (https://infrasure2027.civil.iitkgp.ac.in)
+# ========================================================================
+# IIT Kharagpur | Department of Civil Engineering
+# ========================================================================
+
+# ---------------------------------------------------------
+# Default: allow indexing for search engines
+# ---------------------------------------------------------
+User-agent: *
+Allow: /
+Crawl-delay: 5
+
+# Allow static assets & public pages
+Allow: /$
+
+# Disallow auth / private panels (noindex anyway)
+Disallow: /admin/
+Disallow: /student/
+Disallow: /login
+Disallow: /register
+Disallow: /logout
+
+# ---------------------------------------------------------
+# AI / LLM Crawlers — BLOCK training & scraping
+# ---------------------------------------------------------
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: OAI-SearchBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: Omgilibot
+Disallow: /
+
+User-agent: ImagesiftBot
+Disallow: /
+
+# Meta AI / other LLM scrapers
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+# ---------------------------------------------------------
+# Good bots explicitly allowed (optional, for clarity)
+# ---------------------------------------------------------
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /

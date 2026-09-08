@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}{{ r2.title }} — Round 2 — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">My presentation · Round 2</p>
+    <h1 class="display display-on-dark">{{ r2.title }}</h1>
+    <p class="page-head-sub">
+      {{ ui.type_badge(r2.submission_type) }}
+      <span class="badge badge-type">{{ r2.theme }} · {{ ui.theme_name(r2.theme, config.themes) }}</span>
+      {{ ui.round_badge(1) }}{{ ui.round_badge(2) }}
+      {{ ui.status_badge(r2.status) }}
+    </p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container review-grid">
+    <div class="panel review-sub">
+      <h3 class="review-head">Round 1 vs Round 2</h3>
+      {{ ui.thread_compare(sub, r2) }}
+
+      <div class="sub-review">
+        <p class="sub-review-label">
+          Round 1 reviewer feedback
+          {% if sub.reviewer_reviewed_at %}<span class="badge badge-selected">Sent · {{ sub.reviewer_reviewed_at[:10] }}</span>{% endif %}
+        </p>
+        {% if sub.reviewer_comment %}
+          <p class="review-quote">“{{ sub.reviewer_comment }}”</p>
+        {% else %}
+          <p class="side-note">No feedback was left.</p>
+        {% endif %}
+      </div>
+
+      {% if r2.review_comment %}
+        <div class="sub-review sub-review-final">
+          <p class="sub-review-label">Final decision — {{ ui.status_badge(r2.status) }}</p>
+          <p class="review-quote">“{{ r2.review_comment }}”</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="panel form-card review-form">
+      <h2 class="panel-title">Status</h2>
+      {% if r2.status == "awaiting_decision" %}
+        <p class="side-note">Your Round 2 is with the theme incharge. They compare it with Round 1, review your changes, and make the final decision. No further rounds.</p>
+      {% elif r2.status == "selected" %}
+        <p class="side-note">Congratulations — this presentation was selected. Once the conference team approves your details, payment opens.</p>
+        <a class="btn btn-lg btn-block btn-primary" href="/student/payment">Go to payment</a>
+      {% elif r2.status == "not_selected" %}
+        <p class="side-note">After the final comparison, this presentation was not selected.</p>
+      {% endif %}
+      <a class="btn btn-ghost btn-lg btn-block" href="/student/dashboard">Back to dashboard</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

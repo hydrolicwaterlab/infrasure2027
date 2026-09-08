@@ -1,0 +1,6 @@
+dummydata/
+.venv
+data/
+media/
+map.md 
+run.md

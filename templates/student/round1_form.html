@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit Round 1" if mode == "edit" else "Submit Round 1" }} — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Student portal · Round 1</p>
+    <h1 class="display display-on-dark">{{ "Edit your Round 1 submission" if mode == "edit" else "Submit Round 1" }}</h1>
+    <p class="page-head-sub">
+      {% if mode == "edit" %}
+        Editing a pending Round 1 — your status stays <em>Pending review</em>.
+      {% else %}
+        Introduce your work. A reviewer will ask questions or request changes — the final decision happens after Round 2.
+      {% endif %}
+    </p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container container-narrow">
+    {% include "_form_errors.html" %}
+
+    <form method="post" class="panel form-card"
+          action="{% if mode == 'create' %}/student/apply{% else %}/student/edit/{{ sub.id }}{% endif %}" novalidate>
+      <fieldset class="form-block">
+        <legend class="form-legend">1 · Presentation format</legend>
+        <div class="choice-row">
+          <label class="choice{% if values.submission_type == 'ppt' %} is-on{% endif %}">
+            <input type="radio" name="submission_type" value="ppt" {% if values.submission_type == 'ppt' %}checked{% endif %} required />
+            <span><strong>PPT</strong><small>Oral presentation slot</small></span>
+          </label>
+          <label class="choice{% if values.submission_type == 'poster' %} is-on{% endif %}">
+            <input type="radio" name="submission_type" value="poster" {% if values.submission_type == 'poster' %}checked{% endif %} />
+            <span><strong>Poster</strong><small>Board in the poster gallery</small></span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-block">
+        <legend class="form-legend">2 · Theme</legend>
+        <div class="field">
+          <label for="theme">Choose one of the nine conference themes</label>
+          <select id="theme" name="theme" required>
+            <option value="">— Select a theme —</option>
+            {% for t in config.themes %}
+              <option value="{{ t.label }}" {% if values.theme == t.label %}selected{% endif %}>{{ t.label }} — {{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-block">
+        <legend class="form-legend">3 · Your work</legend>
+        <div class="field">
+          <label for="title">Title</label>
+          <input type="text" id="title" name="title" maxlength="160" value="{{ values.title or '' }}"
+                 placeholder="e.g. AI-based flood forecasting in the Ganga basin" required />
+        </div>
+        <div class="field">
+          <label for="description">Abstract</label>
+          <textarea id="description" name="description" rows="8" minlength="40" maxlength="4000"
+                    placeholder="Summarise the problem, your approach, and the key findings (40–4,000 characters)."
+                    required>{{ values.description or '' }}</textarea>
+          <p class="field-hint">This is what the reviewer reads first — keep it crisp.</p>
+        </div>
+      </fieldset>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-lg" type="submit">{{ "Save changes" if mode == "edit" else "Submit Round 1" }}</button>
+        <a class="btn btn-ghost btn-lg" href="/student/dashboard">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

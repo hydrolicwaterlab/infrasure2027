@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Submission — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Submission · {{ sub.id }}</p>
+    <h1 class="display display-on-dark">{{ sub.title }}</h1>
+    <p class="page-head-sub">
+      {{ ui.type_badge(sub.submission_type) }}
+      <span class="badge badge-type">{{ sub.theme }} · {{ ui.theme_name(sub.theme, config.themes) }}</span>
+      {% if thread | length > 1 %}
+        {{ ui.round_badge(1) }}{{ ui.round_badge(2) }}
+      {% else %}
+        {{ ui.round_badge(1) }}
+      {% endif %}
+      {{ ui.status_badge(sub.status) }}
+    </p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container review-grid">
+    <div class="panel review-sub">
+      {{ ui.submission_detail(sub, students, themes) }}
+      {% if thread | length > 1 %}
+        <h3 class="review-head">Round 1 vs Round 2</h3>
+        {{ ui.thread_compare(thread[0], thread[-1]) }}
+      {% endif %}
+    </div>
+
+    <div class="panel form-card review-form">
+      <h2 class="panel-title">Actions</h2>
+      {% if thread | length == 1 %}
+        {% if sub.status == "pending" %}
+          <p class="side-note">Round 1 — no reviewer yet. Assign one, or review it yourself.</p>
+        {% elif sub.status == "under_review" %}
+          <p class="side-note">The reviewer is working on Round 1. You can change the reviewer or take over.</p>
+        {% elif sub.status == "feedback_given" %}
+          <p class="side-note">Feedback was sent — the student can now submit Round 2.</p>
+        {% endif %}
+      {% else %}
+        {% if sub.status == "awaiting_decision" %}
+          <p class="side-note">The student submitted Round 2. Compare it with Round 1 and the feedback, then decide Selected / Not Selected.</p>
+        {% elif sub.status in ("selected", "not_selected") %}
+          <p class="side-note">Decision recorded on Round 2. You can change it if needed.</p>
+        {% endif %}
+      {% endif %}
+      {% for a in actions %}
+        <a class="btn btn-lg btn-block {{ a.get('cls', 'btn-outline') }}" href="{{ a.url }}">{{ a.label }}</a>
+      {% endfor %}
+      <a class="btn btn-ghost btn-lg btn-block" href="{{ back_url }}">Back</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

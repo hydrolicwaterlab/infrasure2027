@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Page not found — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div class="container notfound">
+    <p class="eyebrow eyebrow-on-dark">404</p>
+    <h1 class="display display-on-dark">This page took a wrong turn.</h1>
+    <p class="page-head-sub">The link may be broken, or the page may have moved. Let's get you back on track.</p>
+    <div class="page-head-actions">
+      <a class="btn btn-accent" href="/">Back to home</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Reviewer panel — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head">
+  <div class="container dash-head">
+    <div>
+      <p class="eyebrow eyebrow-on-dark">Reviewer panel</p>
+      <h1 class="display display-on-dark">Review Round&nbsp;1 submissions assigned to you.</h1>
+      <p class="page-head-sub">Send feedback, questions, or requested changes — you do not select anything. The theme incharge decides after the student submits Round&nbsp;2.</p>
+    </div>
+    <div class="page-head-stats">
+      <span class="quick-stat"><strong>{{ to_review | length }}</strong> to review</span>
+    </div>
+  </div>
+</section>
+
+<section class="dash-section">
+  <div class="container">
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Round 1 — assigned to you</h2>
+      </div>
+      {% if to_review %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Format</th><th>Theme</th><th>Student</th><th>Title</th><th>Submitted</th><th class="th-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in to_review %}
+                <tr>
+                  <td>{{ ui.type_badge(s.submission_type) }}<div class="round-tag">{{ ui.round_badge(1) }}</div></td>
+                  <td><span class="theme-label">{{ s.theme }}</span><small class="cell-sub">{{ ui.theme_name(s.theme, themes) }}</small></td>
+                  <td>{{ s._student }}</td>
+                  <td>
+                    <span class="cell-title">{{ s.title }}</span>
+                    <small class="cell-sub">{{ s.description | truncate(110) }}</small>
+                  </td>
+                  <td>{{ (s.created_at or "")[:10] }}</td>
+                  <td class="cell-actions">
+                    <a class="btn btn-sm btn-primary" href="/reviewer/review/{{ s.id }}">Give feedback</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ ui.empty_state("Nothing to review yet", "When a theme incharge assigns you a Round 1 submission, it appears here.") }}
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Feedback you already sent</h2>
+      </div>
+      {% if done %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Format</th><th>Theme</th><th>Student</th><th>Title</th><th>Status</th><th>Feedback sent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in done %}
+                <tr>
+                  <td>{{ ui.type_badge(s.submission_type) }}</td>
+                  <td><span class="theme-label">{{ s.theme }}</span></td>
+                  <td>{{ s._student }}</td>
+                  <td><span class="cell-title">{{ s.title }}</span></td>
+                  <td>{{ ui.status_badge(s.status) }}</td>
+                  <td>{{ (s.reviewer_reviewed_at or "")[:10] }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ ui.empty_state("No feedback yet", "Submissions you review will be listed here.") }}
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

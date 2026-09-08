@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Users — Admin — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Admin · Users</p>
+    <h1 class="display display-on-dark">Every account.</h1>
+    <p class="page-head-sub">Deactivate accounts or reset passwords. You can't deactivate yourself.</p>
+  </div>
+</section>
+
+<section class="dash-section">
+  <div class="container">
+    <div class="admin-top">{{ ui.admin_nav("users") }}</div>
+    <div class="panel">
+      {% if people %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th><th>Role</th><th>Themes</th><th>Status</th><th>Joined</th><th class="th-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in people %}
+                {% set is_self = current_user.id == p.id %}
+                <tr>
+                  <td><span class="cell-title">{{ p.name }}{{ " (you)" if is_self }}</span><small class="cell-sub">{{ p.email }}</small></td>
+                  <td>{{ "Student" if p.role == "student" else "Theme incharge" if p.role == "theme_incharge" else "Reviewer" if p.role == "reviewer" else "Master admin" }}</td>
+                  <td>{{ p.themes | join(", ") or "—" }}</td>
+                  <td>{{ ui.active_badge(p) }}</td>
+                  <td>{{ (p.created_at or "")[:10] }}</td>
+                  <td class="cell-actions cell-action-group">
+                    {% if not is_self %}
+                      <form class="row-form" method="post" action="/admin/users/{{ p.id }}/toggle">
+                        <button class="btn btn-sm {{ 'btn-ghost' if p.active else 'btn-primary' }}" type="submit">{{ "Deactivate" if p.active else "Activate" }}</button>
+                      </form>
+                      <details class="reset-box" {% if active_reset == p.id %}open{% endif %}>
+                        <summary class="btn btn-sm btn-ghost">Reset password</summary>
+                        <form method="post" action="/admin/users/{{ p.id }}/password" class="reset-form">
+                          {% if active_reset == p.id and errors %}<p class="reset-errors">{{ errors | first }}</p>{% endif %}
+                          <input type="password" name="password" placeholder="New password (8+ chars)" minlength="8" required />
+                          <button class="btn btn-sm btn-primary" type="submit">Save</button>
+                        </form>
+                      </details>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

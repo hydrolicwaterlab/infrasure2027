@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+{% block title %}My details — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Student portal</p>
+    <h1 class="display display-on-dark">{{ "Edit your details" if mode == "edit" else "Tell us about yourself" }}</h1>
+    <p class="page-head-sub">Complete these details once — you can then submit up to two presentations. All fields in your chosen category are compulsory. Approval of these details is only needed before payment.</p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container container-narrow">
+    {% include "_form_errors.html" %}
+    <form method="post" class="panel form-card" action="/student/info" novalidate id="info-form">
+      <!-- Common -->
+      <div class="field">
+        <label for="full_name">Full name <span class="req">*</span></label>
+        <input type="text" id="full_name" name="full_name" value="{{ values.full_name or '' }}" required />
+      </div>
+      <div class="field">
+        <label for="email_display">Account email</label>
+        <input type="email" id="email_display" value="{{ user.email }}" disabled />
+        <p class="field-hint">Your account email is used for all conference communication.</p>
+      </div>
+      <div class="field">
+        <label for="phone">Phone <span class="req">*</span></label>
+        <input type="tel" id="phone" name="phone" value="{{ values.phone or '' }}" placeholder="98765 43210" required />
+      </div>
+
+      <!-- Category -->
+      <div class="field">
+        <label for="participant_category">Participant category <span class="req">*</span></label>
+        <select id="participant_category" name="participant_category" required>
+          <option value="">— Select —</option>
+          <option value="Student" {% if values.participant_category == "Student" %}selected{% endif %}>Student — UG / PG / PhD</option>
+          <option value="Academic" {% if values.participant_category == "Academic" %}selected{% endif %}>Academic — Postdoc · ECR · Professor</option>
+          <option value="Industry" {% if values.participant_category == "Industry" %}selected{% endif %}>Industry — Company professional</option>
+        </select>
+        <p class="field-hint">Choose the group that best describes you.</p>
+      </div>
+
+      <!-- ========== STUDENT branch ========== -->
+      <div class="branch-panel" data-branch="Student" {% if values.participant_category != "Student" %}hidden{% endif %}>
+        <p class="branch-title">Student details</p>
+
+        <div class="field">
+          <label for="student_level">Level <span class="req">*</span></label>
+          <select id="student_level" name="student_level">
+            <option value="">— Select —</option>
+            <option value="UG" {% if values.student_level == "UG" %}selected{% endif %}>UG — Undergraduate</option>
+            <option value="PG" {% if values.student_level == "PG" %}selected{% endif %}>PG — Postgraduate</option>
+            <option value="PhD" {% if values.student_level == "PhD" %}selected{% endif %}>PhD — Doctoral</option>
+          </select>
+        </div>
+
+        <div class="field" data-show-if="student_level==UG" {% if values.student_level != "UG" %}hidden{% endif %}>
+          <label>UG programme <span class="req">*</span></label>
+          <div class="choice-row">
+            {% for prog in ["BTech", "Dual Degree"] %}
+            <label class="choice{% if values.ug_program == prog %} is-on{% endif %}">
+              <input type="radio" name="ug_program" value="{{ prog }}" {% if values.ug_program == prog %}checked{% endif %} />
+              <span><strong>{{ prog }}</strong><small>{% if prog=="BTech" %}4-year BTech{% else %}BTech + MTech (5-year){% endif %}</small></span>
+            </label>
+            {% endfor %}
+          </div>
+          <p class="field-hint">For UG: are you in a regular BTech or a Dual-Degree programme?</p>
+        </div>
+
+        <div class="field">
+          <label for="degree_name">Degree <span class="req">*</span></label>
+          <input type="text" id="degree_name" name="degree_name" value="{{ values.degree_name or '' }}" placeholder="e.g. BTech, BSc, MTech, MSc — or select below" list="degree_list" />
+          <datalist id="degree_list">
+            <option value="BTech"></option><option value="BE"></option><option value="BSc"></option><option value="BA"></option><option value="BArch"></option><option value="BDes"></option>
+            <option value="MTech"></option><option value="ME"></option><option value="MSc"></option><option value="MA"></option><option value="MBA"></option><option value="MArch"></option><option value="MDes"></option>
+            <option value="PhD"></option><option value="Other"></option>
+          </datalist>
+          <p class="field-hint">Type or pick your current degree.</p>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="department">Department <span class="req">*</span></label>
+            <input type="text" id="department" name="department" value="{{ values.department or '' }}" placeholder="e.g. Civil Engineering" />
+          </div>
+          <div class="field">
+            <label for="institute_name">Institute name <span class="req">*</span></label>
+            <input type="text" id="institute_name" name="institute_name" value="{{ values.institute_name or values.affiliation or '' }}" placeholder="e.g. IIT Kharagpur" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="institute_address">Institute address <span class="req">*</span></label>
+          <textarea id="institute_address" name="institute_address" rows="2" placeholder="Full postal address of your institute">{{ values.institute_address or '' }}</textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="institute_country">Country <span class="req">*</span></label>
+            <input type="text" id="institute_country" name="institute_country" value="{{ values.institute_country or '' }}" placeholder="e.g. India" />
+          </div>
+          <div class="field">
+            <label for="institute_zipcode">Zip / Postal code <span class="req">*</span></label>
+            <input type="text" id="institute_zipcode" name="institute_zipcode" value="{{ values.institute_zipcode or '' }}" placeholder="e.g. 721302" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="institute_email">Institute email <span class="req">*</span></label>
+          <input type="email" id="institute_email" name="institute_email" value="{{ values.institute_email or '' }}" placeholder="name@institute.ac.in" />
+          <label style="margin-top:8px; display:inline-flex; gap:8px; align-items:center; font-size:.9rem; cursor:pointer; border:none; padding:0; background:transparent;">
+            <input type="checkbox" id="institute_email_same_student" name="institute_email_same" value="on" {% if values.institute_email_same == "on" %}checked{% endif %} style="accent-color: var(--color-secondary); width:16px; height:16px;">
+            Same as registration email ({{ user.email }})
+          </label>
+          {% if account_is_personal %}
+          <p class="field-hint" style="color:#8a1f1f">Your registration email is a personal address (Gmail/Yahoo/Outlook) — you cannot use “Same as registration email”; please enter a separate official institute email.</p>
+          {% else %}
+          <p class="field-hint" style="color:var(--muted)">If your registration email is your official institute address, you can use “Same as registration email”.</p>
+          {% endif %}
+          <p class="field-hint">Your <strong>official institute email</strong> (e.g. @iitkgp.ac.in, @university.edu). Personal emails like Gmail/Yahoo/Outlook are not allowed.</p>
+        </div>
+        <div class="field" data-show-if="student_level==PhD" {% if values.student_level != "PhD" %}hidden{% endif %}>
+          <label for="supervisor_name">Supervisor name <span class="req">*</span></label>
+          <input type="text" id="supervisor_name" name="supervisor_name" value="{{ values.supervisor_name or '' }}" placeholder="Prof. ... " />
+          <p class="field-hint">Required for PhD students only.</p>
+        </div>
+      </div>
+
+      <!-- ========== ACADEMIC branch ========== -->
+      <div class="branch-panel" data-branch="Academic" {% if values.participant_category != "Academic" %}hidden{% endif %}>
+        <p class="branch-title">Academic details</p>
+
+        <div class="field">
+          <label for="academic_role">Role <span class="req">*</span></label>
+          <select id="academic_role" name="academic_role">
+            <option value="">— Select —</option>
+            {% for r in ["Postdoc", "Early Career Researcher", "Professor"] %}
+              <option value="{{ r }}" {% if values.academic_role == r %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field" data-show-if="academic_role==Professor" {% if values.academic_role != "Professor" %}hidden{% endif %}>
+          <label for="professor_type">Professor type <span class="req">*</span></label>
+          <select id="professor_type" name="professor_type">
+            <option value="">— Select —</option>
+            {% for pt in ["Assistant Professor", "Associate Professor", "Professor"] %}
+              <option value="{{ pt }}" {% if values.professor_type == pt %}selected{% endif %}>{{ pt }}</option>
+            {% endfor %}
+          </select>
+          <p class="field-hint">Assistant / Associate / Full Professor.</p>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="academic_department">Department <span class="req">*</span></label>
+            <input type="text" id="academic_department" name="department" value="{{ values.department or '' }}" placeholder="e.g. Civil Engineering" data-academic-dept />
+          </div>
+          <div class="field">
+            <label for="academic_institute_name">Institute / organization <span class="req">*</span></label>
+            <input type="text" id="academic_institute_name" name="institute_name" value="{{ values.institute_name or values.affiliation or '' }}" placeholder="e.g. IIT Kharagpur" data-academic-inst />
+          </div>
+        </div>
+        <div class="field">
+          <label for="academic_institute_address">Institute address <span class="req">*</span></label>
+          <textarea id="academic_institute_address" name="institute_address" rows="2" placeholder="Full postal address">{{ values.institute_address or '' }}</textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="academic_institute_country">Country <span class="req">*</span></label>
+            <input type="text" id="academic_institute_country" name="institute_country" value="{{ values.institute_country or '' }}" placeholder="e.g. India" />
+          </div>
+          <div class="field">
+            <label for="academic_institute_zipcode">Zip / Postal code <span class="req">*</span></label>
+            <input type="text" id="academic_institute_zipcode" name="institute_zipcode" value="{{ values.institute_zipcode or '' }}" placeholder="e.g. 721302" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="academic_institute_email">Institute email <span class="req">*</span></label>
+          <input type="email" id="academic_institute_email" name="institute_email" value="{{ values.institute_email or '' }}" placeholder="name@institute.ac.in" />
+          <label style="margin-top:8px; display:inline-flex; gap:8px; align-items:center; font-size:.9rem; cursor:pointer; border:none; padding:0; background:transparent;">
+            <input type="checkbox" id="institute_email_same_academic" name="institute_email_same" value="on" {% if values.institute_email_same == "on" %}checked{% endif %} style="accent-color: var(--color-secondary); width:16px; height:16px;">
+            Same as registration email ({{ user.email }})
+          </label>
+          {% if account_is_personal %}
+          <p class="field-hint" style="color:#8a1f1f">Your registration email is personal — you must enter a separate official institute email (cannot use “Same”).</p>
+          {% endif %}
+          <p class="field-hint">Official institute email only — personal emails (Gmail/Yahoo/Outlook) not allowed.</p>
+        </div>
+      </div>
+
+      <!-- ========== INDUSTRY branch ========== -->
+      <div class="branch-panel" data-branch="Industry" {% if values.participant_category != "Industry" %}hidden{% endif %}>
+        <p class="branch-title">Industry details</p>
+        <div class="field">
+          <label for="company_name">Company name <span class="req">*</span></label>
+          <input type="text" id="company_name" name="company_name" value="{{ values.company_name or values.affiliation or '' }}" placeholder="e.g. L&T Construction" />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="position">Position / designation <span class="req">*</span></label>
+            <input type="text" id="position" name="position" value="{{ values.position or '' }}" placeholder="e.g. Senior Engineer" />
+          </div>
+          <div class="field">
+            <label for="company_email">Company email <span class="req">*</span></label>
+            <input type="email" id="company_email" name="company_email" value="{{ values.company_email or '' }}" placeholder="name@company.com" />
+            <label style="margin-top:8px; display:inline-flex; gap:8px; align-items:center; font-size:.9rem; cursor:pointer; border:none; padding:0; background:transparent;">
+              <input type="checkbox" id="company_email_same" name="company_email_same" value="on" {% if values.company_email_same == "on" %}checked{% endif %} style="accent-color: var(--color-secondary); width:16px; height:16px;">
+              Same as registration email ({{ user.email }})
+            </label>
+            {% if account_is_personal %}
+            <p class="field-hint" style="color:#8a1f1f">Your registration email is personal — you must enter a separate official company email (cannot use “Same”).</p>
+            {% else %}
+            <p class="field-hint" style="margin-top:6px;font-size:.85rem;color:var(--muted)">If your registration email is your official company address, you can use “Same as registration email”.</p>
+            {% endif %}
+            <p class="field-hint" style="margin-top:6px;font-size:.85rem;color:var(--muted)">Official company email only — Gmail/Yahoo/Outlook etc. not allowed.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="company_address">Company address <span class="req">*</span></label>
+          <textarea id="company_address" name="company_address" rows="2" placeholder="Full postal address">{{ values.company_address or '' }}</textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="company_country">Country <span class="req">*</span></label>
+            <input type="text" id="company_country" name="company_country" value="{{ values.company_country or '' }}" placeholder="e.g. India" />
+          </div>
+          <div class="field">
+            <label for="company_zipcode">Zip / Postal code <span class="req">*</span></label>
+            <input type="text" id="company_zipcode" name="company_zipcode" value="{{ values.company_zipcode or '' }}" placeholder="e.g. 721302" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Participation mode (always visible) -->
+      <div class="field">
+        <label>Participation mode <span class="req">*</span></label>
+        <div class="choice-row">
+          <label class="choice{% if values.participation_mode == 'in_person' %} is-on{% endif %}">
+            <input type="radio" name="participation_mode" value="in_person" {% if values.participation_mode == 'in_person' %}checked{% endif %} required />
+            <span><strong>In person</strong><small>{{ config.venue }}</small></span>
+          </label>
+          <label class="choice{% if values.participation_mode == 'online' %} is-on{% endif %}">
+            <input type="radio" name="participation_mode" value="online" {% if values.participation_mode == 'online' %}checked{% endif %} />
+            <span><strong>Online</strong><small>Live-streamed sessions</small></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-lg" type="submit">{{ "Save changes" if mode == "edit" else "Save my details" }}</button>
+        <a class="btn btn-ghost btn-lg" href="/student/dashboard">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+(() => {
+  const form = document.getElementById('info-form');
+  if (!form) return;
+  const acctEmail = "{{ user.email }}";
+  const acctIsPersonal = {{ "true" if account_is_personal is defined and account_is_personal else "false" }};
+  const getVal = (name) => {
+    const els = form.querySelectorAll(`[name="${name}"]`);
+    if (!els.length) return "";
+    // if radio group exists, use checked
+    const checked = form.querySelector(`[name="${name}"]:checked`);
+    if (checked) return checked.value || "";
+    // otherwise select / text
+    const el = els[0];
+    return el.value || "";
+  };
+  const update = () => {
+    const cat = getVal('participant_category');
+    form.querySelectorAll('[data-branch]').forEach(p => {
+      const show = p.getAttribute('data-branch') === cat;
+      p.hidden = !show;
+      p.querySelectorAll('input, select, textarea').forEach(inp => {
+        if (!show) {
+          inp.required = false;
+          inp.disabled = true;
+        } else {
+          inp.disabled = false;
+        }
+      });
+    });
+
+    const lvl = getVal('student_level');
+    form.querySelectorAll('[data-show-if="student_level==UG"]').forEach(p => {
+      const show = cat === "Student" && lvl === "UG";
+      p.hidden = !show;
+      p.querySelectorAll('input, select, textarea').forEach(inp => {
+        inp.disabled = !show;
+        if (!show) inp.required = false;
+      });
+    });
+    form.querySelectorAll('[data-show-if="student_level==PhD"]').forEach(p => {
+      const show = cat === "Student" && lvl === "PhD";
+      p.hidden = !show;
+      p.querySelectorAll('input, select').forEach(inp => {
+        inp.disabled = !show;
+        inp.required = show;
+      });
+    });
+
+    const arole = form.querySelector('[name="academic_role"]')?.value || "";
+    form.querySelectorAll('[data-show-if="academic_role==Professor"]').forEach(p => {
+      const show = cat === "Academic" && arole === "Professor";
+      p.hidden = !show;
+      p.querySelectorAll('select, input').forEach(inp => {
+        inp.disabled = !show;
+        inp.required = show;
+      });
+    });
+
+    if (cat === "Student") {
+      const sl = form.querySelector('#student_level');
+      if (sl && !sl.disabled) sl.required = true;
+      form.querySelectorAll('[data-branch="Student"] input, [data-branch="Student"] select, [data-branch="Student"] textarea').forEach(inp => {
+        if (inp.disabled) return;
+        // skip institute_email when same-checkbox is on and account is proper (handled below)
+        if (inp.name === "institute_email" && form.querySelector('#institute_email_same_student')?.checked && !acctIsPersonal) return;
+        if (["degree_name","department","institute_name","institute_address","institute_country","institute_zipcode","institute_email"].includes(inp.name)) inp.required = true;
+        if (inp.name === "ug_program" && lvl === "UG") inp.required = true;
+        if (inp.name === "supervisor_name" && lvl === "PhD") inp.required = true;
+      });
+    } else if (cat === "Academic") {
+      const sel = form.querySelector('#academic_role');
+      if (sel && !sel.disabled) sel.required = true;
+      form.querySelectorAll('[data-branch="Academic"] input, [data-branch="Academic"] textarea, [data-branch="Academic"] select').forEach(inp => {
+        if (inp.disabled) return;
+        if (inp.name === "institute_email" && form.querySelector('#institute_email_same_academic')?.checked && !acctIsPersonal) return;
+        if (["department","institute_name","institute_address","institute_country","institute_zipcode","institute_email"].includes(inp.name)) inp.required = true;
+      });
+    } else if (cat === "Industry") {
+      ["company_name","position","company_email","company_address","company_country","company_zipcode"].forEach(n => {
+        if (n === "company_email" && form.querySelector('#company_email_same')?.checked && !acctIsPersonal) return;
+        const inp = form.querySelector(`[name="${n}"]`);
+        if (inp && !inp.disabled) inp.required = true;
+      });
+    }
+
+    // ---- same-as-registration checkbox logic ----
+    // if account is personal, checkbox must stay disabled / unchecked
+    form.querySelectorAll('input[name="institute_email_same"]').forEach(cb => {
+      const branch = cb.closest('[data-branch]');
+      const isVisible = branch && !branch.hidden;
+      if (acctIsPersonal && isVisible) {
+        if (cb.checked) cb.checked = false;
+        cb.disabled = true;
+        cb.closest('label').style.opacity = "0.6";
+        cb.closest('label').title = "Your registration email is personal — cannot use same";
+      } else if (isVisible) {
+        cb.disabled = false;
+        cb.closest('label').style.opacity = "";
+        cb.closest('label').title = "";
+      } else {
+        cb.disabled = true;
+      }
+      // toggle email readonly
+      const emailInput = branch ? branch.querySelector('input[name="institute_email"]') : null;
+      if (emailInput && isVisible) {
+        if (cb.checked && !acctIsPersonal) {
+          emailInput.value = acctEmail;
+          emailInput.readOnly = true;
+          emailInput.style.opacity = "0.6";
+          emailInput.required = false;
+        } else {
+          emailInput.readOnly = false;
+          emailInput.style.opacity = "";
+        }
+      }
+    });
+    const compCb = form.querySelector('input[name="company_email_same"]');
+    if (compCb) {
+      const branch = compCb.closest('[data-branch]');
+      const isVisible = branch && !branch.hidden;
+      const compEmail = form.querySelector('#company_email');
+      if (acctIsPersonal && isVisible) {
+        if (compCb.checked) compCb.checked = false;
+        compCb.disabled = true;
+        compCb.closest('label').style.opacity = "0.6";
+        compCb.closest('label').title = "Your registration email is personal — cannot use same";
+        if (compEmail) { compEmail.readOnly = false; compEmail.style.opacity=""; }
+      } else if (isVisible) {
+        compCb.disabled = false;
+        compCb.closest('label').style.opacity = "";
+        compCb.closest('label').title = "";
+        if (compCb.checked) {
+          compEmail.value = acctEmail;
+          compEmail.readOnly = true;
+          compEmail.style.opacity="0.6";
+          compEmail.required = false;
+        } else if (compEmail) {
+          compEmail.readOnly = false;
+          compEmail.style.opacity="";
+        }
+      } else {
+        compCb.disabled = true;
+      }
+    }
+
+    form.querySelectorAll('.choice input[type="radio"]').forEach(r => {
+      const lab = r.closest('.choice');
+      if (lab) lab.classList.toggle('is-on', r.checked);
+    });
+  };
+
+  form.addEventListener('change', update);
+  form.addEventListener('input', update);
+  update();
+})();
+</script>
+{% endblock %}

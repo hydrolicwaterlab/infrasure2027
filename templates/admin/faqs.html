@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}FAQs — Admin — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Admin · FAQs</p>
+    <h1 class="display display-on-dark">Manage FAQs.</h1>
+    <p class="page-head-sub">Organize questions into categories, and keep the <a href="/#faq">homepage FAQ section</a> in order.</p>
+  </div>
+</section>
+
+<section class="dash-section">
+  <div class="container">
+    <div class="admin-top">{{ ui.admin_nav("faqs") }}</div>
+    {% include "_form_errors.html" %}
+
+    <div class="dash-grid">
+      <div class="panel form-card">
+        <h2 class="panel-title">Categories</h2>
+        <form method="post" action="/admin/faqs/categories/create" class="inline-form">
+          <input type="text" name="name" placeholder="New category name" value="{{ (values.cat or {}).name or '' }}" required />
+          <button class="btn btn-primary btn-sm" type="submit">Add category</button>
+        </form>
+        <ul class="mini-list faq-cat-list">
+          {% for c in categories %}
+            <li>
+              <details class="edit-box">
+                <summary>
+                  <span class="faq-cat-name">{{ c.name }}</span>
+                  <span class="badge badge-neutral">{{ c.order }}</span>
+                </summary>
+                <form method="post" action="/admin/faqs/categories/{{ c.id }}/rename" class="reset-form">
+                  <input type="text" name="name" value="{{ c.name }}" required />
+                  <button class="btn btn-sm btn-primary" type="submit">Rename</button>
+                </form>
+                <form method="post" action="/admin/faqs/categories/{{ c.id }}/delete"
+                      onsubmit="return confirm('Delete this category? Its FAQs must be moved first.');">
+                  <button class="btn btn-sm btn-ghost" type="submit">Delete category</button>
+                </form>
+              </details>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="panel form-card">
+        <h2 class="panel-title">Add a FAQ</h2>
+        <form method="post" action="/admin/faqs/create" novalidate>
+          <div class="field">
+            <label for="category_id">Category</label>
+            <select id="category_id" name="category_id" required>
+              <option value="">— Select —</option>
+              {% for c in categories %}
+                <option value="{{ c.id }}" {% if (values.faq or {}).category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="question">Question</label>
+            <input type="text" id="question" name="question" maxlength="300" value="{{ (values.faq or {}).question or '' }}" required />
+          </div>
+          <div class="field">
+            <label for="answer">Answer</label>
+            <textarea id="answer" name="answer" rows="4" maxlength="4000" required>{{ (values.faq or {}).answer or '' }}</textarea>
+          </div>
+          <div class="field">
+            <label for="order">Order</label>
+            <input type="number" id="order" name="order" min="0" value="{{ (values.faq or {}).order or 0 }}" />
+            <p class="field-hint">Lower numbers appear first within the category.</p>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">Add FAQ</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2 class="panel-title">All FAQs</h2></div>
+      {% if entries %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Order</th><th>Category</th><th>Question</th><th class="th-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for f in entries %}
+                <tr>
+                  <td>{{ f.order }}</td>
+                  <td><span class="theme-label">{{ cat_map.get(f.category_id, "—") }}</span></td>
+                  <td><span class="cell-title">{{ f.question }}</span><small class="cell-sub">{{ f.answer | truncate(120) }}</small></td>
+                  <td class="cell-actions">
+                    <details class="reset-box edit-box" {% if editing == f.id %}open{% endif %}>
+                      <summary class="btn btn-sm btn-ghost">Edit</summary>
+                      <form method="post" action="/admin/faqs/{{ f.id }}/edit" class="reset-form">
+                        <select name="category_id" required>
+                          {% for c in categories %}
+                            <option value="{{ c.id }}" {% if c.id == f.category_id %}selected{% endif %}>{{ c.name }}</option>
+                          {% endfor %}
+                        </select>
+                        <input type="text" name="question" value="{{ f.question }}" required maxlength="300" />
+                        <textarea name="answer" rows="3" required maxlength="4000">{{ f.answer }}</textarea>
+                        <input type="number" name="order" min="0" value="{{ f.order }}" />
+                        <button class="btn btn-sm btn-primary" type="submit">Save</button>
+                      </form>
+                    </details>
+                    <form class="row-form" method="post" action="/admin/faqs/{{ f.id }}/delete"
+                          onsubmit="return confirm('Delete this FAQ permanently?');">
+                      <button class="btn btn-sm btn-ghost" type="submit">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ ui.empty_state("No FAQs yet", "Add your first FAQ with the form above.", None) }}
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

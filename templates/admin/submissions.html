@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Submissions — Admin — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Admin · Submissions</p>
+    <h1 class="display display-on-dark">Every submission, one table.</h1>
+    <p class="page-head-sub">Rounds are listed separately. Round 2 marked "Awaiting decision" needs the theme incharge's final call (or yours).</p>
+  </div>
+</section>
+
+<section class="dash-section">
+  <div class="container">
+    <div class="admin-top">
+      {{ ui.admin_nav("submissions") }}
+      {{ ui.filter_form("/admin/submissions", themes, filters.theme, filters.status, filters.type, filters.round) }}
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Submissions{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
+      </div>
+      {{ ui.subs_table(
+          subs, themes,
+          "No submissions match",
+          "Try clearing the filters, or wait for students to apply.",
+          "/admin/submissions", "Show all", view_prefix="/incharge/submission") }}
+    </div>
+  </div>
+</section>
+{% endblock %}

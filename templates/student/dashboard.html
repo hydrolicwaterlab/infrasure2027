@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}My dashboard — {{ config.name }}{% endblock %}
+{% block content %}
+{% set ns = namespace(selected=0) %}
+{% for t in threads %}
+  {% set st = (t.round2.status if t.round2 else t.status) %}
+  {% if st == "selected" %}{% set ns.selected = ns.selected + 1 %}{% endif %}
+{% endfor %}
+{% set selected_count = ns.selected %}
+
+<section class="page-head">
+  <div class="container dash-head">
+    <div>
+      <p class="eyebrow eyebrow-on-dark">Student portal</p>
+      <h1 class="display display-on-dark">Welcome back, {{ user.name.split()[0] }}.</h1>
+      <p class="page-head-sub">{{ user.email }} · Member since {{ user.created_at[:10] }}</p>
+    </div>
+    <div class="page-head-actions">
+      {% if not info_done %}
+        <a class="btn btn-accent" href="/student/info">Complete your details</a>
+      {% elif can_apply %}
+        <a class="btn btn-accent" href="/student/apply">＋ Submit Round 1</a>
+      {% else %}
+        <span class="btn btn-accent btn-disabled" aria-disabled="true">Limit reached — 2/2 presentations</span>
+      {% endif %}
+      {% if selected_count %}
+        {% if reg %}
+          {% if reg.status == "approved" %}
+            <a class="btn btn-light" href="/student/payment">{{ "View payment" if reg.fee_paid else "Proceed to payment" }}</a>
+          {% else %}
+            <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment opens once the conference team approves your details">Approval pending</span>
+          {% endif %}
+        {% else %}
+          <a class="btn btn-light" href="/student/info">Complete your details</a>
+        {% endif %}
+      {% else %}
+        <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment opens once a presentation is selected">Payment locked</span>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% set awaiting = 0 %}
+{% set ns2 = namespace(awaiting=0, live=0) %}
+{% for t in threads %}
+  {% set st = (t.round2.status if t.round2 else t.status) %}
+  {% if st not in ("selected", "not_selected") %}
+    {% if st != "feedback_given" %}
+      {% set ns2.awaiting = ns2.awaiting + 1 %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+
+<section class="dash-section">
+  <div class="container">
+    <div class="stat-cards">
+      <div class="stat-card">
+        <p class="stat-value">{{ threads | length }}<small> / 2</small></p>
+        <p class="stat-label">Presentations</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value">{{ ns2.awaiting }}</p>
+        <p class="stat-label">Awaiting action</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value{% if selected_count %} stat-good{% endif %}">{{ selected_count }}</p>
+        <p class="stat-label">Selected</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value">
+          {% if reg %}
+            {{ ui.status_badge(reg.status) }}{% if reg.fee_paid %} · Fee paid{% endif %}
+          {% else %}
+            <span class="badge badge-none">Details missing</span>
+          {% endif %}
+        </p>
+        <p class="stat-label">My details</p>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="dash-col-main">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">My presentations</h2>
+            <p class="panel-sub">Each presentation has two rounds — the original submission and your version after the reviewer's feedback.</p>
+          </div>
+
+          {% if threads %}
+            {% for t in threads %}
+              {% set st = (t.round2.status if t.round2 else t.status) %}
+              <article class="sub-card">
+                <div class="sub-top">
+                  {{ ui.type_badge(t.submission_type) }}
+                  {% if t.round2 %}
+                    {{ ui.round_badge(1) }}{{ ui.round_badge(2) }}
+                  {% else %}
+                    {{ ui.round_badge(1) }}
+                  {% endif %}
+                  <span class="sub-theme">{{ t.theme }} · {{ ui.theme_name(t.theme, config.themes) }}</span>
+                  <span class="badge badge-right">{{ ui.status_badge(st) }}</span>
+                </div>
+                <h3 class="sub-title"><a class="sub-title-link" href="/student/submission/{{ t.id }}">{{ t.title }}</a></h3>
+                <p class="sub-desc">{{ (t.round2.description if t.round2 else t.description) }}</p>
+
+                {% if t.status == "feedback_given" %}
+                  <div class="sub-review">
+                    <p class="sub-review-label">Round 1 feedback</p>
+                    <p>“{{ t.reviewer_comment }}”</p>
+                  </div>
+                {% endif %}
+                {% if t.round2 and t.round2.review_comment %}
+                  <div class="sub-review sub-review-final">
+                    <p class="sub-review-label">Final decision — {{ ui.status_badge(t.round2.status) }}</p>
+                    <p>“{{ t.round2.review_comment }}”</p>
+                  </div>
+                {% endif %}
+
+                <div class="sub-foot">
+                  <span>Round 1 submitted {{ t.created_at[:10] }}{% if t.round2 %} · Round 2 submitted {{ t.round2.created_at[:10] }}{% endif %}</span>
+                  <a class="btn btn-sm btn-ghost" href="/student/submission/{{ t.id }}">View</a>
+                  {% if t.status == "pending" %}
+                    <a class="btn btn-sm btn-outline" href="/student/edit/{{ t.id }}">Edit Round 1</a>
+                  {% elif t.status == "feedback_given" and not t.round2 %}
+                    <a class="btn btn-sm btn-primary" href="/student/submission/{{ t.id }}/round2/apply">Submit Round 2</a>
+                  {% elif t.round2 %}
+                    <a class="btn btn-sm btn-ghost" href="/student/submission/{{ t.id }}/round2">View Round 2</a>
+                  {% endif %}
+                </div>
+              </article>
+            {% endfor %}
+          {% else %}
+            {{ ui.empty_state("No presentations yet", "Present your research as a PPT or a Poster under any of the nine themes. First complete your details, then submit Round 1.", "/student/info" if not info_done else "/student/apply", "Complete your details" if not info_done else "Submit Round 1") }}
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="dash-col-side">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">My details</h2>
+          </div>
+          {% if reg %}
+            <dl class="reg-dl">
+              <dt>Full name</dt><dd>{{ reg.full_name }}</dd>
+              {% if reg.participant_category %}
+                <dt>Category</dt><dd>
+                  <span class="badge badge-neutral">{{ reg.participant_category }}</span>
+                  {% if reg.participant_category == "Student" and reg.student_level %}
+                    <span class="badge badge-type">{{ reg.student_level }}</span>
+                    {% if reg.student_level == "UG" and reg.ug_program %}<span class="badge badge-type">{{ reg.ug_program }}</span>{% endif %}
+                  {% elif reg.participant_category == "Academic" and reg.academic_role %}
+                    <span class="badge badge-type">{{ reg.academic_role }}</span>
+                    {% if reg.professor_type %}<span class="badge badge-type">{{ reg.professor_type }}</span>{% endif %}
+                  {% elif reg.participant_category == "Industry" and reg.position %}
+                    <span class="badge badge-type">{{ reg.position }}</span>
+                  {% endif %}
+                </dd>
+                {% if reg.degree_name %}<dt>Degree</dt><dd>{{ reg.degree_name }}</dd>{% endif %}
+                {% if reg.department %}<dt>Department</dt><dd>{{ reg.department }}</dd>{% endif %}
+                {% if reg.institute_name %}<dt>Institute</dt><dd>{{ reg.institute_name }}</dd>{% endif %}
+                {% if reg.institute_address %}<dt>Address</dt><dd style="font-size:.9rem;line-height:1.5">{{ reg.institute_address }}{% if reg.institute_country or reg.institute_zipcode %} · {{ reg.institute_country or '' }}{% if reg.institute_zipcode %} - {{ reg.institute_zipcode }}{% endif %}{% endif %}</dd>{% endif %}
+                {% if reg.institute_country %}<dt>Country</dt><dd>{{ reg.institute_country }}</dd>{% endif %}
+                {% if reg.institute_zipcode %}<dt>Zipcode</dt><dd>{{ reg.institute_zipcode }}</dd>{% endif %}
+                {% if reg.institute_email %}<dt>Inst. email</dt><dd>{{ reg.institute_email }}</dd>{% endif %}
+                {% if reg.supervisor_name %}<dt>Supervisor</dt><dd>{{ reg.supervisor_name }}</dd>{% endif %}
+                {% if reg.company_name %}<dt>Company</dt><dd>{{ reg.company_name }}</dd>{% endif %}
+                {% if reg.company_email %}<dt>Company email</dt><dd>{{ reg.company_email }}</dd>{% endif %}
+                {% if reg.company_address %}<dt>Company address</dt><dd style="font-size:.9rem;line-height:1.5">{{ reg.company_address }}{% if reg.company_country or reg.company_zipcode %} · {{ reg.company_country or '' }}{% if reg.company_zipcode %} - {{ reg.company_zipcode }}{% endif %}{% endif %}</dd>{% endif %}
+                {% if reg.company_country %}<dt>Company country</dt><dd>{{ reg.company_country }}</dd>{% endif %}
+                {% if reg.company_zipcode %}<dt>Company zipcode</dt><dd>{{ reg.company_zipcode }}</dd>{% endif %}
+                {# legacy fallback #}
+                {% if not reg.participant_category and reg.designation %}<dt>Designation</dt><dd>{{ reg.designation }}</dd>{% endif %}
+                {% if not reg.institute_name and reg.affiliation %}<dt>Affiliation</dt><dd>{{ reg.affiliation }}</dd>{% endif %}
+              {% else %}
+                <dt>Designation</dt><dd>{{ reg.designation }}</dd>
+                <dt>Affiliation</dt><dd>{{ reg.affiliation }}</dd>
+              {% endif %}
+              <dt>Phone</dt><dd>{{ reg.phone }}</dd>
+              <dt>Mode</dt><dd>{{ ui.mode_badge(reg.participation_mode) }}</dd>
+              <dt>Status</dt>
+              <dd>{{ ui.status_badge(reg.status) }}{% if reg.fee_paid %} · Fee paid{% endif %}</dd>
+            </dl>
+            {% if reg.status == "pending" %}
+              <a class="btn btn-sm btn-outline" href="/student/info">Edit details</a>
+            {% endif %}
+          {% else %}
+            <p class="side-note">Complete your details once — you can then submit up to two presentations.</p>
+            <a class="btn btn-primary" href="/student/info">Complete details</a>
+          {% endif %}
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">How the two rounds work</h2>
+          </div>
+          <ul class="rules-list">
+            <li>Submit Round 1 — PPT or Poster under any of the nine themes.</li>
+            <li>A reviewer gives feedback, asks questions, or requests changes. No selection yet.</li>
+            <li>Submit Round 2 addressing the feedback — your Round 1 stays saved.</li>
+            <li>The theme incharge compares both and decides Selected / Not Selected.</li>
+            <li>If selected, pay once the conference team approves your details.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

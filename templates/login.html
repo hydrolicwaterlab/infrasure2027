@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Log in — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="auth-section">
+  <div class="container auth-grid">
+    <aside class="auth-aside">
+      <p class="eyebrow eyebrow-on-dark">{{ config.short_title }}</p>
+      <h2 class="display display-on-dark">Welcome back to the forum.</h2>
+      <p class="auth-aside-text">{{ config.dates }} · {{ config.venue }}</p>
+      <ul class="auth-facts">
+        <li><strong>{{ config.key_facts[0].value }}</strong> {{ config.key_facts[0].label }}</li>
+        <li><strong>{{ config.key_facts[1].value }}</strong> {{ config.key_facts[1].label }}</li>
+      </ul>
+      <p class="auth-aside-note">No account yet? <a href="/register12345">Create one</a> — it takes a minute.</p>
+    </aside>
+
+    <div class="auth-card">
+      <h1 class="auth-title">Log in</h1>
+      <p class="auth-sub">Access your submissions, status, and conference registration.</p>
+      {% include "_form_errors.html" %}
+      <form method="post" action="/login12345" novalidate>
+        <div class="field">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" value="{{ (values.email if values else '') }}" autocomplete="email" required autofocus />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required />
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Log in</button>
+      </form>
+      <p class="auth-alt">Forgot your password? Email <a href="mailto:{{ config.email }}">{{ config.email }}</a> and the team will reset it.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

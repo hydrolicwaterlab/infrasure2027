@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Registrations — Admin — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Admin · Participant details</p>
+    <h1 class="display display-on-dark">Participant details.</h1>
+    <p class="page-head-sub">Approve or reject details, and flag fees paid. A student pays only after being selected AND their details are approved.</p>
+  </div>
+</section>
+
+<section class="dash-section">
+  <div class="container">
+    <div class="admin-top">{{ ui.admin_nav("registrations") }}</div>
+    <div class="panel">
+      {% if regs %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th><th>Category</th><th>Details</th><th>Contact / Affiliation</th><th>Mode</th><th>Status</th><th>Fee</th><th class="th-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in regs %}
+                <tr>
+                  <td><span class="cell-title">{{ r.full_name }}</span><small class="cell-sub">{{ r.email }}</small><small class="cell-sub">{{ r.phone }}</small></td>
+                  <td>
+                    {% if r.participant_category %}
+                      <span class="badge badge-neutral">{{ r.participant_category }}</span><br/>
+                      {% if r.participant_category == "Student" %}
+                        <small class="cell-sub">{{ r.student_level }}{% if r.ug_program %} · {{ r.ug_program }}{% endif %}{% if r.degree_name %} · {{ r.degree_name }}{% endif %}</small>
+                        {% if r.supervisor_name %}<br/><small class="cell-sub">Supervisor: {{ r.supervisor_name }}</small>{% endif %}
+                      {% elif r.participant_category == "Academic" %}
+                        <small class="cell-sub">{{ r.academic_role }}{% if r.professor_type %} · {{ r.professor_type }}{% endif %}</small>
+                      {% elif r.participant_category == "Industry" %}
+                        <small class="cell-sub">{{ r.position }}</small>
+                      {% endif %}
+                    {% else %}
+                      <span class="cell-sub">{{ r.designation or "— legacy —" }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if r.department %}<span class="cell-sub">Dept: {{ r.department }}</span><br/>{% endif %}
+                    {% if r.degree_name and r.participant_category=="Student" %}<span class="cell-sub">Degree: {{ r.degree_name }}</span><br/>{% endif %}
+                    {% if r.institute_email %}<small class="cell-sub">Inst. mail: {{ r.institute_email }}</small><br/>{% endif %}
+                    {% if r.company_email %}<small class="cell-sub">Company mail: {{ r.company_email }}</small>{% endif %}
+                  </td>
+                  <td>
+                    {% if r.participant_category == "Industry" %}
+                      <span class="cell-title">{{ r.company_name or "—" }}</span>
+                      {% if r.company_address %}<small class="cell-sub">{{ r.company_address }}</small>{% endif %}
+                      {% if r.company_country or r.company_zipcode %}<br/><small class="cell-sub">{{ r.company_country or '' }}{% if r.company_zipcode %} - {{ r.company_zipcode }}{% endif %}</small>{% endif %}
+                    {% else %}
+                      <span class="cell-title">{{ r.institute_name or r.affiliation or "—" }}</span>
+                      {% if r.institute_address %}<small class="cell-sub">{{ r.institute_address }}</small>{% endif %}
+                      {% if r.institute_country or r.institute_zipcode %}<br/><small class="cell-sub">{{ r.institute_country or '' }}{% if r.institute_zipcode %} - {{ r.institute_zipcode }}{% endif %}</small>{% endif %}
+                    {% endif %}
+                    {% if r.department and r.participant_category != "Student" and r.participant_category != "Academic" %}
+                      <small class="cell-sub">Dept: {{ r.department }}</small>
+                    {% endif %}
+                  </td>
+                  <td>{{ ui.mode_badge(r.participation_mode) }}</td>
+                  <td>{{ ui.status_badge(r.status) }}</td>
+                  <td>{{ "Yes" if r.fee_paid else "—" }}</td>
+                  <td class="cell-actions">
+                    <form class="row-form" method="post" action="/admin/registrations/{{ r.id }}/set">
+                      {% if r.status != "approved" %}<button class="btn btn-sm btn-ghost" name="action" value="approve" type="submit">Approve</button>{% endif %}
+                      {% if r.status != "rejected" %}<button class="btn btn-sm btn-ghost" name="action" value="reject" type="submit">Reject</button>{% endif %}
+                      <button class="btn btn-sm btn-ghost" name="action" value="fee" type="submit">{{ "Unmark fee" if r.fee_paid else "Mark fee paid" }}</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ ui.empty_state("No registrations yet", "Students who register for attendance will appear here.") }}
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

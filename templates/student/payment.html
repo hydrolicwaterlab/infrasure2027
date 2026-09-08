@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Payment — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Student portal · Payment</p>
+    <h1 class="display display-on-dark">Conference registration payment.</h1>
+    <p class="page-head-sub">Your presentation was selected and your details approved — complete payment to confirm your participation.</p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container container-narrow">
+    {% if reg.fee_paid %}
+      <div class="panel form-card">
+        <div class="empty-state">
+          <p class="empty-title">Payment received</p>
+          <p>Your registration fee is marked paid. See you at {{ config.name }}!</p>
+        </div>
+        <div class="form-actions">
+          <a class="btn btn-primary" href="/student/dashboard">Back to dashboard</a>
+        </div>
+      </div>
+    {% else %}
+      <div class="panel form-card">
+        <div class="panel-head">
+          <h2 class="panel-title">Registration summary</h2>
+        </div>
+        <dl class="reg-dl">
+          <dt>Name</dt><dd>{{ reg.full_name }}</dd>
+          <dt>Email</dt><dd>{{ reg.email }}</dd>
+          <dt>Designation</dt><dd>{{ reg.designation }}</dd>
+          <dt>Affiliation</dt><dd>{{ reg.affiliation }}</dd>
+          <dt>Mode</dt><dd>{{ ui.mode_badge(reg.participation_mode) }}</dd>
+          <dt>Registration status</dt><dd>{{ ui.status_badge(reg.status) }}</dd>
+          <dt>Fee</dt><dd><strong>&#8377; TBD</strong><small class="cell-sub">Amount to be announced — this is a preview of the payment step.</small></dd>
+        </dl>
+        <form method="post" action="/student/payment" class="form-actions">
+          <button class="btn btn-primary btn-lg" type="submit">Pay now</button>
+          <a class="btn btn-ghost btn-lg" href="/student/dashboard">Back to dashboard</a>
+        </form>
+        <p class="field-hint">This is a simulated payment — no real charge happens yet. Online payment integration arrives later.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

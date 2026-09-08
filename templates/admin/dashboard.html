@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Admin — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Master admin</p>
+    <h1 class="display display-on-dark">Conference administration.</h1>
+    <p class="page-head-sub">A god-view of students, submissions, and registrations.</p>
+  </div>
+</section>
+
+<section class="dash-section">
+  <div class="container">
+    <div class="admin-top">
+      {{ ui.admin_nav("dashboard") }}
+    </div>
+
+    <div class="stat-cards">
+      <div class="stat-card"><p class="stat-value">{{ stats.students }}</p><p class="stat-label">Students</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.incharges }}</p><p class="stat-label">Theme incharges</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.reviewers }}</p><p class="stat-label">Reviewers</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.submissions }}</p><p class="stat-label">Submissions (rounds)</p></div>
+      <div class="stat-card"><p class="stat-value stat-good">{{ stats.pending }}</p><p class="stat-label">Round 1 pending review</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.feedbacks }}</p><p class="stat-label">Feedback sent</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.awaiting }}</p><p class="stat-label">Round 2 awaiting decision</p></div>
+      <div class="stat-card"><p class="stat-value stat-good">{{ stats.selected }}</p><p class="stat-label">Selected</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.registrations }}</p><p class="stat-label">Participant details</p></div>
+      <div class="stat-card"><p class="stat-value {{ 'stat-good' if stats.reg_approved }}">{{ stats.reg_approved }}</p><p class="stat-label">Approved attendance</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.fees_paid }}</p><p class="stat-label">Fees collected</p></div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Submissions per theme</h2>
+          <p class="panel-sub">Counts across all nine conference themes.</p>
+        </div>
+        <ul class="theme-stats">
+          {% for t in stats.per_theme %}
+            <li>
+              <span class="theme-stats-label">{{ t.label }}</span>
+              <span class="theme-stats-track"><span class="theme-stats-bar" style="width: {{ (t.count / (stats.submissions or 1) * 100) | round }}%"></span></span>
+              <span class="theme-stats-value">{{ t.count }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="dash-col-side">
+        <div class="panel">
+          <div class="panel-head"><h2 class="panel-title">Quick actions</h2></div>
+          <div class="quick-actions">
+            <a class="btn btn-primary" href="/admin/submissions">Review submissions</a>
+            <a class="btn btn-outline" href="/admin/registrations">Manage registrations</a>
+            <a class="btn btn-outline" href="/admin/announcements">Post an announcement</a>
+            <a class="btn btn-outline" href="/admin/faqs">Manage FAQs</a>
+            <a class="btn btn-outline" href="/admin/incharges">Add an incharge</a>
+            <a class="btn btn-outline" href="/admin/reviewers">Add a reviewer</a>
+            <a class="btn btn-outline" href="/admin/users">Manage users</a>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2 class="panel-title">Attendance</h2></div>
+          <ul class="mini-list">
+            <li>{{ stats.reg_pending }} pending</li>
+            <li>{{ stats.reg_approved }} approved</li>
+            <li>{{ stats.registrations - stats.reg_pending - stats.reg_approved }} rejected</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

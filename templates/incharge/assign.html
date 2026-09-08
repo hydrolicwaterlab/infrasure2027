@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Assign reviewer — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Incharge · Assign reviewer · Round 1</p>
+    <h1 class="display display-on-dark">{{ sub.title }}</h1>
+    <p class="page-head-sub">Pick an existing reviewer who covers {{ sub.theme }}, or create a new one — they'll review Round 1 and send feedback to the student.</p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container container-narrow">
+    {% include "_form_errors.html" %}
+    <div class="panel form-card">
+      {{ ui.submission_detail(sub, students, themes) }}
+
+      <form method="post" action="/incharge/assign/{{ sub.id }}" novalidate>
+        <fieldset class="form-block">
+          <legend class="form-legend">Choose an existing reviewer</legend>
+          {% if reviewers %}
+            <div class="choice-list">
+              {% for r in reviewers %}
+                <label class="choice{% if values.reviewer_id == r.id %} is-on{% endif %}">
+                  <input type="radio" name="reviewer_id" value="{{ r.id }}" {% if values.reviewer_id == r.id %}checked{% endif %} />
+                  <span>
+                    <strong>{{ r.name }}</strong>
+                    <small>{{ r.email }} · Themes: {% for t in r.themes %}{{ t }}{% if not loop.last %}, {% endif %}{% endfor %}</small>
+                  </span>
+                </label>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="side-note">No reviewers cover this theme yet — add one below.</p>
+          {% endif %}
+          <div class="form-actions">
+            <button class="btn btn-primary btn-lg" type="submit">Assign reviewer</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-block">
+          <legend class="form-legend">…or add a new reviewer</legend>
+          <p class="side-note">A new reviewer is created with {{ sub.theme }} and immediately assigned to this submission.</p>
+          <div class="field">
+            <label for="name">Full name</label>
+            <input type="text" id="name" name="name" value="{{ values.name or '' }}" required />
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ values.email or '' }}" required />
+          </div>
+          <div class="field">
+            <label for="password">Temporary password</label>
+            <input type="password" id="password" name="password" minlength="8" required />
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-accent btn-lg" type="submit">Create &amp; assign</button>
+          </div>
+        </fieldset>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

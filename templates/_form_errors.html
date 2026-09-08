@@ -1,0 +1,6 @@
+{% if errors %}
+  <div class="form-errors" role="alert">
+    <p class="form-errors-title">Please fix the following:</p>
+    <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Create an account — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="auth-section">
+  <div class="container auth-grid">
+    <aside class="auth-aside">
+      <p class="eyebrow eyebrow-on-dark">{{ config.short_title }}</p>
+      <h2 class="display display-on-dark">Present your work at {{ config.short_title }}.</h2>
+      <p class="auth-aside-text">{{ config.dates }} · {{ config.venue }}</p>
+      <ul class="auth-facts">
+        <li>Submit a <strong>PPT</strong> or a <strong>Poster</strong> — up to 2 per student</li>
+        <li>Choose any of the <strong>9 conference themes</strong></li>
+        <li>Track your selection status live</li>
+      </ul>
+      <p class="auth-aside-note">Already registered? <a href="/login12345">Log in</a>.</p>
+    </aside>
+
+    <div class="auth-card">
+      <h1 class="auth-title">Create your account</h1>
+      <p class="auth-sub">For students, researchers, and early-career engineers.</p>
+      {% include "_form_errors.html" %}
+      <form method="post" action="/register12345" novalidate>
+        <div class="field">
+          <label for="name">Full name</label>
+          <input type="text" id="name" name="name" value="{{ values.name if values else '' }}" autocomplete="name" required autofocus />
+        </div>
+        <div class="field">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" value="{{ values.email if values else '' }}" autocomplete="email" required />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" autocomplete="new-password" minlength="8" required />
+            <p class="field-hint">At least 8 characters.</p>
+          </div>
+          <div class="field">
+            <label for="confirm">Confirm password</label>
+            <input type="password" id="confirm" name="confirm" autocomplete="new-password" minlength="8" required />
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Create account</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
