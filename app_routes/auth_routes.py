@@ -16,6 +16,7 @@ from auth import (
     verify_password,
 )
 from db import insert, one
+from ratelimit import limiter
 
 router = APIRouter()
 
@@ -25,6 +26,7 @@ def _redirect_home_for(user: dict) -> RedirectResponse:
 
 
 @router.get("/register12345")
+@limiter.limit("20/minute")
 def register_form(request: Request):
     if user_from_request(request):
         return _redirect_home_for(user_from_request(request))
@@ -32,6 +34,7 @@ def register_form(request: Request):
 
 
 @router.post("/register12345")
+@limiter.limit("20/minute")
 def register_submit(
     request: Request,
     name: str = Form(""),
@@ -66,6 +69,7 @@ def register_submit(
 
 
 @router.get("/login12345")
+@limiter.limit("20/minute")
 def login_form(request: Request):
     user = user_from_request(request)
     if user:
@@ -74,6 +78,7 @@ def login_form(request: Request):
 
 
 @router.post("/login12345")
+@limiter.limit("20/minute")
 def login_submit(request: Request, email: str = Form(""), password: str = Form("")):
     data = {"email": email, "password": password}
     form, errors = validate(LoginForm, data)

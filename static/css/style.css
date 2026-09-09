@@ -445,7 +445,7 @@ section[id], footer[id] { scroll-margin-top: 88px; }
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1;
-  color: var(--white);
+  color: rgb(250, 116, 32);
   white-space: nowrap;
 }
 

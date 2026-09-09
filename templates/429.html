@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Too many requests — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div class="container notfound">
+    <p class="eyebrow eyebrow-on-dark">429</p>
+    <h1 class="display display-on-dark">Slow down a moment.</h1>
+    <p class="page-head-sub">This connection has made too many requests in a short time. Please wait a bit and try again shortly.</p>
+    <div class="page-head-actions">
+      <a class="btn btn-accent" href="/">Back to home</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

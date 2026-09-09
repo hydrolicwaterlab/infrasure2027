@@ -1,10 +1,14 @@
 """INFRASURE 2027 — FastAPI app entry point."""
 import os
+import time
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
+from ratelimit import limiter
 from site_config import BASE_DIR, SITE_CONFIG
 
 app = FastAPI(
@@ -13,6 +17,10 @@ app = FastAPI(
     redoc_url="/wellnotexpectingyoutobehere1234554321",
     openapi_url=None,
 )
+
+app.state.limiter = limiter
+limiter._exempt_routes.add("starlette.staticfiles.StaticFiles")
+app.add_middleware(SlowAPIMiddleware)
 
 app.mount("/media", StaticFiles(directory=os.path.join(BASE_DIR, "media")), name="media")
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
@@ -33,6 +41,17 @@ app.include_router(admin_routes.router)
 @app.exception_handler(Redirect)
 def redirect_handler(request, exc: Redirect):
     return RedirectResponse(exc.url, status_code=303)
+
+
+@app.exception_handler(RateLimitExceeded)
+def rate_limit_exceeded(request, exc: RateLimitExceeded):
+    resp = templates.TemplateResponse(request, "429.html", base_ctx(request), status_code=429)
+    try:
+        retry_after = max(1, int(exc.limit.limit.get_expiry() - time.time()))
+    except (AttributeError, TypeError):
+        retry_after = 60
+    resp.headers["Retry-After"] = str(retry_after)
+    return resp
 
 
 @app.exception_handler(404)
