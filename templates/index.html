@@ -221,7 +221,7 @@
     </header>
     <div class="format-grid">
       <div class="format-main">
-        <h3 class="mini-head">Format Highlights</h3>
+        <h3 class="mini-head">Highlights</h3>
         <ul class="rule-list">
           {% for p in config.format_points %}
             <li>{{ p }}</li>
@@ -230,17 +230,9 @@
       </div>
       <aside class="format-side">
         <div>
-          <h3 class="mini-head">Target Participants</h3>
+          <h3 class="mini-head">Target Participants and Publications</h3>
           <ul class="rule-list rule-list-plain">
-            {% for p in config.participants %}
-              <li>{{ p }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-        <div>
-          <h3 class="mini-head">Publications</h3>
-          <ul class="rule-list rule-list-plain">
-            {% for p in config.publications %}
+            {% for p in config.participantspublications %}
               <li>{{ p }}</li>
             {% endfor %}
           </ul>

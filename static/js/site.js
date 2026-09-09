@@ -3,9 +3,19 @@
   const toggle = document.getElementById("nav-toggle");
   const menu = document.getElementById("mobile-nav");
 
-  // Sticky header: compact state on scroll
+  // Sticky header: compact state on scroll (with hysteresis to avoid flicker)
   if (header) {
-    const onScroll = () => header.classList.toggle("is-scrolled", window.scrollY > 12);
+    let compact = false;
+    const setCompact = (active) => {
+      if (active !== compact) {
+        compact = active;
+        header.classList.toggle("is-scrolled", compact);
+      }
+    };
+    const onScroll = () => {
+      if (window.scrollY > 30) setCompact(true);
+      else if (window.scrollY < 2) setCompact(false);
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
   }

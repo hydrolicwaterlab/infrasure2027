@@ -103,7 +103,7 @@
           </div>
         </div>
         <div class="field">
-          <label for="institute_email">Institute email <span class="req">*</span></label>
+          <label for="institute_email">Institute email <span class="req" id="institute_email_req">*</span></label>
           <input type="email" id="institute_email" name="institute_email" value="{{ values.institute_email or '' }}" placeholder="name@institute.ac.in" />
           <label style="margin-top:8px; display:inline-flex; gap:8px; align-items:center; font-size:.9rem; cursor:pointer; border:none; padding:0; background:transparent;">
             <input type="checkbox" id="institute_email_same_student" name="institute_email_same" value="on" {% if values.institute_email_same == "on" %}checked{% endif %} style="accent-color: var(--color-secondary); width:16px; height:16px;">
@@ -114,7 +114,7 @@
           {% else %}
           <p class="field-hint" style="color:var(--muted)">If your registration email is your official institute address, you can use “Same as registration email”.</p>
           {% endif %}
-          <p class="field-hint">Your <strong>official institute email</strong> (e.g. @iitkgp.ac.in, @university.edu). Personal emails like Gmail/Yahoo/Outlook are not allowed.</p>
+          <p class="field-hint">Your <strong>official institute email</strong> (e.g. @iitkgp.ac.in, @university.edu). Personal emails like Gmail/Yahoo/Outlook are not allowed. Compulsory for PhD students; optional for UG / PG.</p>
         </div>
         <div class="field" data-show-if="student_level==PhD" {% if values.student_level != "PhD" %}hidden{% endif %}>
           <label for="supervisor_name">Supervisor name <span class="req">*</span></label>
@@ -229,18 +229,6 @@
         </div>
       </div>
 
-      <!-- Participation mode (always visible) -->
-      <div class="field">
-        <label>Participation mode <span class="req">*</span></label>
-        <div class="choice-row">
-          <label class="choice is-on">
-            <input type="radio" name="participation_mode" value="in_person" checked required />
-            <span><strong>In person</strong><small>{{ config.venue }}</small></span>
-          </label>
-        </div>
-        <p class="side-note" style="margin-top:8px;">This is a fully in-person conference — there is no online participation.</p>
-      </div>
-
       <div class="form-actions">
         <button class="btn btn-primary btn-lg" type="submit">{{ "Save changes" if mode == "edit" else "Save my details" }}</button>
         <a class="btn btn-ghost btn-lg" href="/student/dashboard">Cancel</a>
@@ -311,11 +299,21 @@
     if (cat === "Student") {
       const sl = form.querySelector('#student_level');
       if (sl && !sl.disabled) sl.required = true;
+      const instEmailOptional = lvl === "UG" || lvl === "PG";
+      const instEmailReq = document.getElementById('institute_email_req');
+      if (instEmailReq) instEmailReq.style.display = instEmailOptional ? "none" : "";
       form.querySelectorAll('[data-branch="Student"] input, [data-branch="Student"] select, [data-branch="Student"] textarea').forEach(inp => {
         if (inp.disabled) return;
-        // skip institute_email when same-checkbox is on and account is proper (handled below)
-        if (inp.name === "institute_email" && form.querySelector('#institute_email_same_student')?.checked && !acctIsPersonal) return;
-        if (["degree_name","department","institute_name","institute_address","institute_country","institute_zipcode","institute_email"].includes(inp.name)) inp.required = true;
+        if (inp.name === "institute_email") {
+          // optional for UG/PG; otherwise required unless same-checkbox on and account is proper (handled below)
+          if (!instEmailOptional) {
+            inp.required = !(form.querySelector('#institute_email_same_student')?.checked && !acctIsPersonal);
+          } else {
+            inp.required = false;
+          }
+          return;
+        }
+        if (["degree_name","department","institute_name","institute_address","institute_country","institute_zipcode"].includes(inp.name)) inp.required = true;
         if (inp.name === "ug_program" && lvl === "UG") inp.required = true;
         if (inp.name === "supervisor_name" && lvl === "PhD") inp.required = true;
       });

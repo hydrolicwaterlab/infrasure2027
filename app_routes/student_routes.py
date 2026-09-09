@@ -91,7 +91,7 @@ def info_submit(
     user: dict = Depends(require_role("student")),
     full_name: str = Form(""),
     phone: str = Form(""),
-    participation_mode: str = Form(""),
+    participation_mode: str = Form("in_person"),
     participant_category: str = Form(""),
     student_level: str = Form(""),
     ug_program: str = Form(""),

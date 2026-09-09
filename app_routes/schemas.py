@@ -463,7 +463,7 @@ class AttendanceForm(BaseModel):
             self.institute_address = _addr(self.institute_address, "Please enter your institute address.")
             self.institute_country = _country(self.institute_country, "Please enter your country.")
             self.institute_zipcode = _zipcode(self.institute_zipcode, "Please enter your zip / postal code.")
-            # institute email: checkbox same-as-registration vs manual
+            # institute email: optional for UG/PG; compulsory otherwise
             same_inst = (self.institute_email_same or "").strip().lower() in ("on", "true", "1", "yes")
             self.institute_email_same = "on" if same_inst else ""
             if same_inst:
@@ -472,6 +472,8 @@ class AttendanceForm(BaseModel):
                 if _is_personal_email(acct):
                     raise ValueError("Your registration email is a personal address (Gmail/Yahoo/Outlook). Please enter your official institute email instead of using 'Same as registration email'.")
                 self.institute_email = acct
+            elif lvl in ("UG", "PG") and not (self.institute_email or "").strip():
+                self.institute_email = ""
             else:
                 self.institute_email = _email(self.institute_email, "Please enter your institute email.")
                 if _is_personal_email(self.institute_email):

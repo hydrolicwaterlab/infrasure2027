@@ -40,6 +40,11 @@ async def not_found(request, exc):
     return templates.TemplateResponse(request, "404.html", base_ctx(request), status_code=404)
 
 
+@app.get("/ping")
+def ping():
+    return "pong"
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "app": SITE_CONFIG["name"]}

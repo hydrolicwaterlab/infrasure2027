@@ -812,15 +812,15 @@ section[id], footer[id] { scroll-margin-top: 88px; }
    ========================================================================== */
 .format-grid {
   display: grid;
-  grid-template-columns: 7fr 5fr;
-  gap: 80px;
+  grid-template-columns: 7fr 7fr;
+  gap: 30px;
   align-items: start;
 }
 .rule-list li {
   position: relative;
-  padding: 14px 0 14px 26px;
+  padding: 14px 0 14px 20px;
   border-bottom: 1px solid var(--line);
-  font-size: 1.13rem;
+  font-size: 1.1rem;
   line-height: 1.6;
   color: var(--ink);
 }

@@ -147,7 +147,9 @@ def info_complete(user: dict) -> bool:
             return False
         if not reg.get("department") or not reg.get("institute_name"):
             return False
-        if not reg.get("institute_address") or not reg.get("institute_country") or not reg.get("institute_zipcode") or not reg.get("institute_email"):
+        # institute email is optional for UG/PG students
+        email_ok = bool(reg.get("institute_email")) or reg.get("student_level") in ("UG", "PG")
+        if not reg.get("institute_address") or not reg.get("institute_country") or not reg.get("institute_zipcode") or not email_ok:
             return False
         if reg.get("student_level") == "UG" and not reg.get("ug_program"):
             return False
