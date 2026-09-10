@@ -46,3 +46,11 @@ def policies(request: Request):
     ctx.update(auth_context(request))
     ctx.update(flash_text(request.query_params.get("msg")))
     return templates.TemplateResponse(request, "policies.html", ctx)
+
+
+@router.get("/sponsorship", response_class=HTMLResponse)
+def sponsorship(request: Request):
+    ctx = {"request": request, "config": SITE_CONFIG}
+    ctx.update(auth_context(request))
+    ctx.update(flash_text(request.query_params.get("msg")))
+    return templates.TemplateResponse(request, "sponsorship.html", ctx)

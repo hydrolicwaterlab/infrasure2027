@@ -31,6 +31,24 @@
   </div>
 {% endmacro %}
 
+{% macro name_group(name, members) %}
+  <div class="team-group">
+    <div class="team-group-head">
+      <h2 class="team-group-title">{{ name }}</h2>
+      <span class="team-count" aria-label="{{ members|length }} members">{{ members|length }}</span>
+    </div>
+    <div class="advisor-grid">
+      {% for m in members %}
+        {% set parts = m.split(',', 1) %}
+        <article class="advisor-card">
+          <h3 class="advisor-name">{{ parts[0] }}</h3>
+          <p class="advisor-affil">{{ (parts[1] if parts|length > 1 else '')|trim }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+{% endmacro %}
+
 {% block title %}{{ config.name }} — {{ config.tagline }}{% endblock %}
 
 {% block content %}
@@ -74,6 +92,7 @@
     <div class="hero-cta">
       <a class="btn btn-accent btn-lg hero-btn btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register now</a>
       <a class="hero-link" href="#submit">Submit your work <span aria-hidden="true">&rarr;</span></a>
+      <a class="hero-link" href="/sponsorship">Become a sponsor <span aria-hidden="true">&rarr;</span></a>
     </div>
     <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.9); text-shadow: 0 1px 8px rgba(0,0,0,.45);">Registration will start soon</p>
   </div>
@@ -349,59 +368,74 @@
   </div>
 </section>
 
-<!-- 10. ANNOUNCEMENTS -->
-{% if announcements %}
-<section class="section" id="announcements">
-  <div class="container container-narrow">
+<!-- 9. ADVISORY COMMITTEE -->
+<section class="section section-sage" id="advisory">
+  <div class="container container-narrow team-page">
     <header class="section-head">
-      <p class="eyebrow"><span class="eyebrow-num">08</span> — News &amp; Updates</p>
-      <h2 class="display">Announcements</h2>
+      <p class="eyebrow"><span class="eyebrow-num">08</span> — Advisory Committee</p>
+      <h2 class="display">Advisors guiding {{ config.name }}</h2>
     </header>
-    {% for a in announcements %}
-      <article class="panel ann-item">
-        <div class="ann-head">
-          <h3 class="ann-title">{{ a.title }}</h3>
-          {% if a.created_at %}<span class="ann-date">{{ a.created_at[:10] }}</span>{% endif %}
-        </div>
-        <div class="ann-body">{{ a.body }}</div>
-      </article>
+    {% for name, members in config.advisory_committee.items() %}
+      {{ name_group(name, members) }}
     {% endfor %}
   </div>
 </section>
-{% endif %}
 
-<!-- 11. FAQ -->
-<section class="section section-paper" id="faq">
+<!-- 10. UPDATES — Announcements + FAQ merged -->
+<section class="section" id="updates">
   <div class="container container-narrow">
-    <header class="section-head">
-      <p class="eyebrow"><span class="eyebrow-num">09</span> — Help Centre</p>
-      <h2 class="display">Frequently asked questions</h2>
-      <p style="margin-top:12px;color:var(--muted);max-width:62ch;">Find answers about registration, submissions, selection, and payment for {{ config.name }}.</p>
-    </header>
-    {% set any_faq = faq_groups | selectattr("faqs") | list | length %}
-    {% if any_faq %}
-      {% for g in faq_groups %}
-        {% if g.faqs %}
-          <h3 class="faq-cat">{{ g.category.name }}</h3>
-          <div class="faq-list">
-            {% for f in g.faqs %}
-              <details class="faq-item">
-                <summary>
-                  <span class="faq-q">{{ f.question }}</span>
-                  <span class="faq-toggle" aria-hidden="true">+</span>
-                </summary>
-                <div class="faq-a">{{ f.answer }}</div>
-              </details>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endfor %}
-    {% else %}
-      <div class="panel">
-        {{ ui.empty_state("No FAQs yet", "Questions and answers will appear here soon.") }}
-      </div>
-    {% endif %}
-    <p class="side-note faq-contact">Still have questions? Email <a href="mailto:{{ config.email }}">{{ config.email }}</a>.</p>
+      <p class="eyebrow"><span class="eyebrow-num">09</span> — Updates</p>
+
+    <!-- Announcements -->
+    <div id="announcements" class="updates-block">
+      <h3 class="updates-subhead">Announcements</h3>
+      {% if announcements %}
+        {% for a in announcements %}
+          <article class="panel ann-item">
+            <div class="ann-head">
+              <h3 class="ann-title">{{ a.title }}</h3>
+              {% if a.created_at %}<span class="ann-date">{{ a.created_at[:10] }}</span>{% endif %}
+            </div>
+            <div class="ann-body">{{ a.body }}</div>
+          </article>
+        {% endfor %}
+      {% else %}
+        <div class="panel">
+          <p class="empty-state">No announcements yet. Check back soon.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- FAQ -->
+    <div id="faq" class="updates-block updates-block--faq">
+      <h3 class="updates-subhead">Frequently asked questions</h3>
+      <p style="margin-top:8px;color:var(--muted);max-width:62ch;">Find answers about registration, submissions, selection, and payment.</p>
+      {% set any_faq = faq_groups | selectattr("faqs") | list | length %}
+      {% if any_faq %}
+        {% for g in faq_groups %}
+          {% if g.faqs %}
+            <h3 class="faq-cat">{{ g.category.name }}</h3>
+            <div class="faq-list">
+              {% for f in g.faqs %}
+                <details class="faq-item">
+                  <summary>
+                    <span class="faq-q">{{ f.question }}</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
+                  </summary>
+                  <div class="faq-a">{{ f.answer }}</div>
+                </details>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <div class="panel">
+          {{ ui.empty_state("No FAQs yet", "Questions and answers will appear here soon.") }}
+        </div>
+      {% endif %}
+      <p class="side-note faq-contact">Still have questions? Email <a href="mailto:{{ config.email }}">{{ config.email }}</a>.</p>
+    </div>
+
   </div>
 </section>
 

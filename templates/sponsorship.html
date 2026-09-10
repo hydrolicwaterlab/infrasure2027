@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Sponsorship Benefits — {{ config.name }}{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">{{ config.sponsorship_benefits.eyebrow }}</p>
+    <h1 class="display display-on-dark">{{ config.sponsorship_benefits.title }}</h1>
+  </div>
+</section>
+
+<section class="sponsor-section">
+  <div class="container">
+    <header class="sponsor-intro">
+      <h2 class="sponsor-title">Choose your tier</h2>
+      <p class="sponsor-lead">All amounts are in INR</p>
+    </header>
+
+    {# Desktop / tablet table #}
+    <div class="sponsor-table-wrap" role="region" aria-label="Sponsorship benefits comparison" tabindex="0">
+      <table class="sponsor-table">
+        <caption class="visually-hidden">Sponsorship Benefits — Platinum to Bronze comparison</caption>
+        <thead>
+          <tr>
+            {% for col in config.sponsorship_benefits.columns %}
+              <th scope="col" {% if loop.first %}class="col-sticky"{% endif %}>{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for tier in config.sponsorship_benefits.tiers %}
+          <tr class="tier-{{ tier.name|lower }}">
+            <th scope="row" class="col-sticky tier-name">
+              <span class="tier-badge tier-{{ tier.name|lower }}">{{ tier.name }}</span>
+            </th>
+            <td class="tier-amount"><strong>{{ tier.amount }}</strong></td>
+            {% for val in tier.benefits %}
+              <td>
+                {% if val is sameas true %}
+                  <span class="s-icon s-icon--yes" aria-label="Included"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.5"/></svg></span>
+                {% elif val is sameas false %}
+                  <span class="s-icon s-icon--no" aria-label="Not included"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></span>
+                {% else %}
+                  <span class="s-text">{{ val }}</span>
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="table-hint">← Scroll horizontally to see all benefits →</p>
+
+    {# Mobile stacked cards #}
+    <div class="sponsor-cards" aria-label="Sponsorship tiers — mobile view">
+      {% for tier in config.sponsorship_benefits.tiers %}
+      <article class="sponsor-card tier-{{ tier.name|lower }}">
+        <div class="sponsor-card-head">
+          <span class="tier-badge tier-{{ tier.name|lower }}">{{ tier.name }}</span>
+          <span class="tier-amount"><strong>{{ tier.amount }}</strong></span>
+        </div>
+        <dl class="sponsor-card-list">
+          {% for col in config.sponsorship_benefits.columns[2:] %}
+            {% set val = tier.benefits[loop.index0] %}
+            <div class="sponsor-card-row">
+              <dt>{{ col }}</dt>
+              <dd>
+                {% if val is sameas true %}
+                  <span class="s-icon s-icon--yes" aria-label="Included"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.5"/></svg></span>
+                {% elif val is sameas false %}
+                  <span class="s-icon s-icon--no" aria-label="Not included"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></span>
+                {% else %}
+                  <span class="s-text">{{ val }}</span>
+                {% endif %}
+              </dd>
+            </div>
+          {% endfor %}
+        </dl>
+      </article>
+      {% endfor %}
+    </div>
+
+    <div class="sponsor-cta">
+      <div class="sponsor-cta-box">
+        <h3>Interested in sponsoring {{ config.name }}?</h3>
+        <p>{{ config.sponsorship_benefits.note }}</p>
+        <p>Contact us at <a href="mailto:{{ config.sponsorship_benefits.contact_email }}">{{ config.sponsorship_benefits.contact_email }}</a> for more information.</p>
+        <div class="sponsor-cta-actions">
+          <a class="btn btn-outline" href="/media/INFRASURE2027_broucher.pdf" download>Download Brochure</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}
