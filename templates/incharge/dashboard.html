@@ -19,7 +19,7 @@
     <div class="page-head-stats">
       <span class="quick-stat"><strong>{{ subs | length }}</strong> shown</span>
       <span class="quick-stat"><strong>{{ pending }}</strong> pending review</span>
-      <span class="quick-stat"><strong>{{ decisions }}</strong> deciding</span>
+      <span class="quick-stat"><strong>{{ under_review }}</strong> under review</span>
     </div>
   </div>
 </section>
@@ -29,14 +29,20 @@
     {{ ui.filter_form("/incharge/dashboard", themes, filters.theme, filters.status, filters.type, filters.round) }}
     <div class="panel">
       <div class="panel-head">
-        <h2 class="panel-title">Submissions{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
-        <p class="panel-sub">Round 1 needs an assigned reviewer or your own feedback. Round 2 (Awaiting decision) needs your Selected / Not Selected call.</p>
+        <h2 class="panel-title">Round {{ filters.round }} submissions{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
+        <p class="panel-sub">
+          {% if filters.round == 2 %}
+            Round 2 content (poster abstract / PPT PDF) needs a reviewer — or your own decision — to reach the final Selected / Not Selected outcome.
+          {% else %}
+            Each Round 1 needs a reviewer (or your own review) to decide Selected for Round 2 or Not Selected.
+          {% endif %}
+        </p>
       </div>
       {{ ui.subs_table(
           subs, themes,
           "Nothing to review here yet",
           "When a student applies under one of your themes, it appears here with the abstract and student details.",
-          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission") }}
+          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission", round_no=filters.round) }}
     </div>
   </div>
 </section>

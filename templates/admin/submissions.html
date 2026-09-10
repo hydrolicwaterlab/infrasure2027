@@ -7,7 +7,7 @@
   <div class="container">
     <p class="eyebrow eyebrow-on-dark">Admin · Submissions</p>
     <h1 class="display display-on-dark">Every submission, one table.</h1>
-    <p class="page-head-sub">Rounds are listed separately. Round 2 marked "Awaiting decision" needs the theme incharge's final call (or yours).</p>
+    <p class="page-head-sub">Round 1 submissions need a reviewer or incharge decision — Selected for Round 2 or Not Selected.</p>
   </div>
 </section>
 
@@ -19,13 +19,13 @@
     </div>
     <div class="panel">
       <div class="panel-head">
-        <h2 class="panel-title">Submissions{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
+        <h2 class="panel-title">Round {{ filters.round }} submissions{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
       </div>
       {{ ui.subs_table(
           subs, themes,
           "No submissions match",
           "Try clearing the filters, or wait for students to apply.",
-          "/admin/submissions", "Show all", view_prefix="/incharge/submission") }}
+          "/admin/submissions", "Show all", view_prefix="/incharge/submission", round_no=filters.round) }}
     </div>
   </div>
 </section>

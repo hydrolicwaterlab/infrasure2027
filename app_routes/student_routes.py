@@ -1,21 +1,32 @@
-"""Student routes — dashboard, threads (round1 apply/edit, round2), info, payment."""
-from fastapi import APIRouter, Depends, Form, Request
+"""Student routes — dashboard, threads (round 1 apply/edit), format choice, round 2 content, info, payment."""
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi.responses import RedirectResponse
 
-from app_routes.schemas import MAX_SUBMISSIONS, RoundTwoForm, SubmissionForm, AttendanceForm, validate
+from app_routes.schemas import (
+    MAX_SUBMISSIONS,
+    AttendanceForm,
+    FormatChoiceForm,
+    RoundTwoForm,
+    SubmissionForm,
+    validate,
+)
 from app_routes.service import (
+    choose_format,
     create_round1,
-    has_round2,
+    current_view,
     has_selected_submission,
     info_complete,
     now,
     payment_eligible,
     registration_for,
+    round2_view,
     round1_view,
-    round2_of,
+    site_flag,
     student_threads,
     students_map,
-    submit_round2,
+    submit_round2_content,
     thread_count,
+    upload_round2_pdf,
 )
 from app_routes.utils import flash_response, render, render_msg
 from auth import require_role
@@ -32,21 +43,9 @@ def _owned_submission(user: dict, sid: str):
     return sub, None
 
 
-def _own_round1(user: dict, sid: str):
-    """The student's own submission (the thread anchor)."""
-    return _owned_submission(user, sid)
-
-
 @router.get("/dashboard")
 def dashboard(request: Request, user: dict = Depends(require_role("student"))):
-    threads = student_threads(user)
-    decorated = []
-    for r1 in threads:
-        row = dict(r1)
-        row["title"] = (r1.get("title_r2") or "").strip() or (r1.get("title_r1") or "")
-        row["description"] = (r1.get("description_r2") or "").strip() or (r1.get("description_r1") or "")
-        row["round2"] = round2_of(r1)
-        decorated.append(row)
+    threads = [current_view(s) for s in student_threads(user)]
     reg = registration_for(user)
     has_selected = has_selected_submission(user)
     can_apply = info_complete(user) and thread_count(user) < MAX_SUBMISSIONS
@@ -55,7 +54,7 @@ def dashboard(request: Request, user: dict = Depends(require_role("student"))):
         "student/dashboard.html",
         msg=request.query_params.get("msg"),
         user=user,
-        threads=decorated,
+        threads=threads,
         reg=reg,
         has_selected=has_selected,
         can_apply=can_apply,
@@ -68,6 +67,8 @@ def dashboard(request: Request, user: dict = Depends(require_role("student"))):
 
 @router.get("/info")
 def info_form(request: Request, user: dict = Depends(require_role("student"))):
+    if not site_flag("registration_open"):
+        return flash_response("/student/dashboard", "registration_closed")
     reg = registration_for(user)
     if reg and reg["status"] != "pending":
         return flash_response("/student/dashboard", "attendance_locked")
@@ -117,6 +118,8 @@ def info_submit(
     designation: str = Form(""),
     affiliation: str = Form(""),
 ):
+    if not site_flag("registration_open"):
+        return flash_response("/student/dashboard", "registration_closed")
     reg = registration_for(user)
     if reg and reg["status"] != "pending":
         return flash_response("/student/dashboard", "attendance_locked")
@@ -187,6 +190,8 @@ def info_submit(
 
 @router.get("/apply")
 def apply_form(request: Request, user: dict = Depends(require_role("student"))):
+    if not site_flag("round1_open"):
+        return flash_response("/student/dashboard", "round1_closed")
     if not info_complete(user):
         return flash_response("/student/info", "info_required")
     if thread_count(user) >= MAX_SUBMISSIONS:
@@ -198,29 +203,32 @@ def apply_form(request: Request, user: dict = Depends(require_role("student"))):
 def apply_submit(
     request: Request,
     user: dict = Depends(require_role("student")),
-    submission_type: str = Form(""),
     theme: str = Form(""),
     title: str = Form(""),
     description: str = Form(""),
 ):
+    if not site_flag("round1_open"):
+        return flash_response("/student/dashboard", "round1_closed")
     if not info_complete(user):
         return flash_response("/student/info", "info_required")
     if thread_count(user) >= MAX_SUBMISSIONS:
         return flash_response("/student/dashboard", "submissions_full")
-    data = {"submission_type": submission_type, "theme": theme, "title": title, "description": description}
+    data = {"theme": theme, "title": title, "description": description}
     form, errors = validate(SubmissionForm, data)
     if errors:
         return render(request, "student/round1_form.html", mode="create", values=data, errors=errors, user=user)
-    create_round1(user, form.submission_type, form.theme, form.title, form.description)
-    return flash_response("/student/dashboard", "submission_created")
+    create_round1(user, form.theme, form.title, form.description)
+    return flash_response("/student/dashboard", "r1_created")
 
 
 @router.get("/edit/{sid}")
 def edit_form(request: Request, sid: str, user: dict = Depends(require_role("student"))):
-    sub, redir = _own_round1(user, sid)
+    sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if sub["status"] != "pending":
+    if not site_flag("round1_open"):
+        return flash_response("/student/dashboard", "round1_closed")
+    if sub["r1_status"] != "r1_pending":
         return flash_response("/student/dashboard", "submission_locked")
     return render(request, "student/round1_form.html", mode="edit", sub=sub,
                   values=round1_view(sub), user=user)
@@ -231,23 +239,23 @@ def edit_submit(
     request: Request,
     sid: str,
     user: dict = Depends(require_role("student")),
-    submission_type: str = Form(""),
     theme: str = Form(""),
     title: str = Form(""),
     description: str = Form(""),
 ):
-    sub, redir = _own_round1(user, sid)
+    sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if sub["status"] != "pending":
+    if not site_flag("round1_open"):
+        return flash_response("/student/dashboard", "round1_closed")
+    if sub["r1_status"] != "r1_pending":
         return flash_response("/student/dashboard", "submission_locked")
-    data = {"submission_type": submission_type, "theme": theme, "title": title, "description": description}
+    data = {"theme": theme, "title": title, "description": description}
     form, errors = validate(SubmissionForm, data)
     if errors:
         return render(request, "student/round1_form.html", mode="edit", sub=sub,
                       values=data, errors=errors, user=user)
     update("submissions", sid, {
-        "submission_type": form.submission_type,
         "theme": form.theme,
         "title_r1": form.title,
         "description_r1": form.description,
@@ -257,72 +265,164 @@ def edit_submit(
 
 @router.get("/submission/{sid}")
 def submission_detail(request: Request, sid: str, user: dict = Depends(require_role("student"))):
-    sub, redir = _own_round1(user, sid)
+    sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    return render(request, "student/submission.html", user=user, sub=round1_view(sub),
-                  r2=round2_of(sub), students=students_map())
+    return render(request, "student/submission.html", user=user, sub=current_view(sub),
+                  students=students_map())
 
 
-# ---------- round 2 ----------
+# ---------- round 2: format choice then content (poster form / ppt PDF) ----------
 
-@router.get("/submission/{sid}/round2/apply")
-def round2_form(request: Request, sid: str, user: dict = Depends(require_role("student"))):
-    sub, redir = _own_round1(user, sid)
+def _r2_access_err(sub: dict) -> str | None:
+    """Return a flash code if Round-2 content can't be submitted yet, else None."""
+    if not site_flag("round1_results_declared"):
+        return "round1_results_not_declared"
+    if not site_flag("round2_open"):
+        return "round2_closed"
+    if sub["r1_status"] != "r1_selected":
+        return "round2_not_ready"
+    if not sub.get("format"):
+        return "round2_not_ready"
+    if sub.get("r2_status") in ("r2_under_review", "selected", "not_selected"):
+        return "content_locked"
+    return None
+
+
+@router.get("/submission/{sid}/round2")
+def round2_choice(request: Request, sid: str, user: dict = Depends(require_role("student"))):
+    sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if sub["status"] != "feedback_given":
+    if not site_flag("round1_results_declared"):
+        return flash_response(f"/student/submission/{sid}", "round1_results_not_declared")
+    if not site_flag("round2_open"):
+        return flash_response(f"/student/submission/{sid}", "round2_closed")
+    if sub["r1_status"] != "r1_selected":
         return flash_response(f"/student/submission/{sid}", "round2_not_ready")
-    if has_round2(sub):
-        return flash_response(f"/student/submission/{sid}/round2", "round2_already_exists")
-    return render(request, "student/round2_form.html", mode="create", sub=round1_view(sub),
-                  values={}, user=user, students=students_map())
+    if sub.get("format"):
+        target = "content" if sub["format"] == "poster" else "upload"
+        return RedirectResponse(f"/student/submission/{sid}/round2/{target}", status_code=303)
+    return render(request, "student/round2_choice.html", user=user, sub=round1_view(sub),
+                  values={"format": sub.get("format") or ""}, errors=None, students=students_map())
 
 
-@router.post("/submission/{sid}/round2/apply")
-def round2_submit(
+@router.post("/submission/{sid}/round2")
+def round2_choose(
+    request: Request,
+    sid: str,
+    user: dict = Depends(require_role("student")),
+    format: str = Form(""),
+):
+    sub, redir = _owned_submission(user, sid)
+    if redir:
+        return redir
+    if not site_flag("round1_results_declared"):
+        return flash_response(f"/student/submission/{sid}", "round1_results_not_declared")
+    if not site_flag("round2_open"):
+        return flash_response(f"/student/submission/{sid}", "round2_closed")
+    form, errors = validate(FormatChoiceForm, {"format": format})
+    if errors:
+        return render(request, "student/round2_choice.html", user=user, sub=round1_view(sub),
+                      values={"format": format}, errors=errors, students=students_map())
+    _, err = choose_format(user, sid, form.format)
+    if err:
+        return flash_response(f"/student/submission/{sid}/round2", err)
+    target = "content" if form.format == "poster" else "upload"
+    return flash_response(f"/student/submission/{sid}/round2/{target}", "format_chosen")
+
+
+# ----- poster: revised title + abstract -----
+
+@router.get("/submission/{sid}/round2/content")
+def round2_content_form(request: Request, sid: str, user: dict = Depends(require_role("student"))):
+    sub, redir = _owned_submission(user, sid)
+    if redir:
+        return redir
+    if (sub.get("format") or "") != "poster":
+        return flash_response(f"/student/submission/{sid}", "bad_format")
+    err = _r2_access_err(sub)
+    if err:
+        return flash_response(f"/student/submission/{sid}", err)
+    return render(request, "student/round2_content.html", user=user, sub=round2_view(sub),
+                  values={"title": sub.get("title_r2") or "", "description": sub.get("description_r2") or ""},
+                  errors=None, students=students_map())
+
+
+@router.post("/submission/{sid}/round2/content")
+def round2_content_submit(
     request: Request,
     sid: str,
     user: dict = Depends(require_role("student")),
     title: str = Form(""),
     description: str = Form(""),
 ):
-    sub, redir = _own_round1(user, sid)
+    sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if sub["status"] != "feedback_given":
-        return flash_response(f"/student/submission/{sid}", "round2_not_ready")
-    data = {"title": title, "description": description}
-    form, errors = validate(RoundTwoForm, data)
-    if errors:
-        return render(request, "student/round2_form.html", mode="create", sub=round1_view(sub),
-                      values=data, errors=errors, user=user, students=students_map())
-    _, err = submit_round2(user, sid, form.title, form.description)
+    if (sub.get("format") or "") != "poster":
+        return flash_response(f"/student/submission/{sid}", "bad_format")
+    err = _r2_access_err(sub)
     if err:
         return flash_response(f"/student/submission/{sid}", err)
-    return flash_response(f"/student/submission/{sid}/round2", "round2_submitted")
+    form, errors = validate(RoundTwoForm, {"title": title, "description": description})
+    if errors:
+        return render(request, "student/round2_content.html", user=user, sub=round2_view(sub),
+                      values={"title": title, "description": description}, errors=errors, students=students_map())
+    _, e = submit_round2_content(user, sid, form.title, form.description)
+    if e:
+        return flash_response(f"/student/submission/{sid}", e)
+    return flash_response(f"/student/submission/{sid}", "r2_content_saved")
 
 
-@router.get("/submission/{sid}/round2")
-def round2_detail(request: Request, sid: str, user: dict = Depends(require_role("student"))):
-    sub, redir = _own_round1(user, sid)
+# ----- ppt: PDF upload -----
+
+@router.get("/submission/{sid}/round2/upload")
+def round2_upload_form(request: Request, sid: str, user: dict = Depends(require_role("student"))):
+    sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    r2 = round2_of(sub)
-    if not r2:
-        if sub["status"] != "feedback_given":
-            return flash_response(f"/student/submission/{sid}", "round2_not_ready")
-        return flash_response(f"/student/submission/{sid}/round2/apply", "round2_not_ready")
-    return render(request, "student/round2.html", user=user, sub=round1_view(sub), r2=r2,
-                  students=students_map())
+    if (sub.get("format") or "") != "ppt":
+        return flash_response(f"/student/submission/{sid}", "bad_format")
+    err = _r2_access_err(sub)
+    if err:
+        return flash_response(f"/student/submission/{sid}", err)
+    return render(request, "student/round2_upload.html", user=user, sub=round2_view(sub),
+                  errors=None, students=students_map())
 
 
-# ---------- payment (requires selected + admin-approved info) ----------
+@router.post("/submission/{sid}/round2/upload")
+async def round2_upload_submit(
+    request: Request,
+    sid: str,
+    user: dict = Depends(require_role("student")),
+    file: UploadFile = File(...),
+):
+    sub, redir = _owned_submission(user, sid)
+    if redir:
+        return redir
+    if (sub.get("format") or "") != "ppt":
+        return flash_response(f"/student/submission/{sid}", "bad_format")
+    err = _r2_access_err(sub)
+    if err:
+        return flash_response(f"/student/submission/{sid}", err)
+    data = await file.read()
+    _, e = upload_round2_pdf(user, sid, file.filename or "submission.pdf", data)
+    if e:
+        return flash_response(f"/student/submission/{sid}/round2/upload", e)
+    return flash_response(f"/student/submission/{sid}", "r2_uploaded")
+
+
+# ---------- payment (requires final selection + declared results + open phase + approved info) ----------
 
 @router.get("/payment")
 def payment_page(request: Request, user: dict = Depends(require_role("student"))):
     if not has_selected_submission(user):
         return flash_response("/student/dashboard", "need_selected")
+    if not site_flag("round2_results_declared"):
+        return flash_response("/student/dashboard", "round2_results_not_declared")
+    if not site_flag("payment_open"):
+        return flash_response("/student/dashboard", "payment_closed")
     reg = registration_for(user)
     if not reg:
         return flash_response("/student/info", "payment_ready")
@@ -336,6 +436,10 @@ def payment_page(request: Request, user: dict = Depends(require_role("student"))
 def payment_submit(request: Request, user: dict = Depends(require_role("student"))):
     if not has_selected_submission(user):
         return flash_response("/student/dashboard", "need_selected")
+    if not site_flag("round2_results_declared"):
+        return flash_response("/student/dashboard", "round2_results_not_declared")
+    if not site_flag("payment_open"):
+        return flash_response("/student/dashboard", "payment_closed")
     reg = registration_for(user)
     if not reg:
         return flash_response("/student/info", "payment_ready")

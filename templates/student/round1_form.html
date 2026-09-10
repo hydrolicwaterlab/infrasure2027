@@ -9,7 +9,7 @@
       {% if mode == "edit" %}
         Editing a pending Round 1 — your status stays <em>Pending review</em>.
       {% else %}
-        Introduce your work. A reviewer will ask questions or request changes — the final decision happens after Round 2.
+        Introduce your work. A reviewer (or the theme incharge) will decide whether it moves to Round 2, where you'll choose your presentation format.
       {% endif %}
     </p>
   </div>
@@ -22,21 +22,7 @@
     <form method="post" class="panel form-card"
           action="{% if mode == 'create' %}/student/apply{% else %}/student/edit/{{ sub.id }}{% endif %}" novalidate>
       <fieldset class="form-block">
-        <legend class="form-legend">1 · Presentation format</legend>
-        <div class="choice-row">
-          <label class="choice{% if values.submission_type == 'ppt' %} is-on{% endif %}">
-            <input type="radio" name="submission_type" value="ppt" {% if values.submission_type == 'ppt' %}checked{% endif %} required />
-            <span><strong>PPT</strong><small>Oral presentation slot</small></span>
-          </label>
-          <label class="choice{% if values.submission_type == 'poster' %} is-on{% endif %}">
-            <input type="radio" name="submission_type" value="poster" {% if values.submission_type == 'poster' %}checked{% endif %} />
-            <span><strong>Poster</strong><small>Board in the poster gallery</small></span>
-          </label>
-        </div>
-      </fieldset>
-
-      <fieldset class="form-block">
-        <legend class="form-legend">2 · Theme</legend>
+        <legend class="form-legend">1 · Theme</legend>
         <div class="field">
           <label for="theme">Choose one of the nine conference themes</label>
           <select id="theme" name="theme" required>
@@ -49,7 +35,7 @@
       </fieldset>
 
       <fieldset class="form-block">
-        <legend class="form-legend">3 · Your work</legend>
+        <legend class="form-legend">2 · Your work</legend>
         <div class="field">
           <label for="title">Title</label>
           <input type="text" id="title" name="title" maxlength="160" value="{{ values.title or '' }}"
@@ -60,7 +46,7 @@
           <textarea id="description" name="description" rows="8" minlength="40" maxlength="4000"
                     placeholder="Summarise the problem, your approach, and the key findings (40–4,000 characters)."
                     required>{{ values.description or '' }}</textarea>
-          <p class="field-hint">This is what the reviewer reads first — keep it crisp.</p>
+          <p class="field-hint">This is what the reviewer reads first — keep it crisp. You'll choose PPT or Poster in Round 2.</p>
         </div>
       </fieldset>
 

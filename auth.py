@@ -91,7 +91,7 @@ def user_from_request(request: Request) -> dict | None:
 def require_login(request: Request) -> dict:
     user = user_from_request(request)
     if not user:
-        raise Redirect("/login12345?msg=login_required")
+        raise Redirect("/logininfrasure?msg=login_required")
     return user
 
 

@@ -25,7 +25,7 @@ app.add_middleware(SlowAPIMiddleware)
 app.mount("/media", StaticFiles(directory=os.path.join(BASE_DIR, "media")), name="media")
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
-from app_routes import admin_routes, auth_routes, incharge_routes, public, reviewer_routes, student_routes  # noqa: E402
+from app_routes import admin_routes, auth_routes, incharge_routes, pdf_routes, public, reviewer_routes, student_routes  # noqa: E402
 from app_routes.utils import base_ctx  # noqa: E402
 from auth import Redirect  # noqa: E402
 from site_config import templates  # noqa: E402
@@ -36,6 +36,7 @@ app.include_router(student_routes.router)
 app.include_router(incharge_routes.router)
 app.include_router(reviewer_routes.router)
 app.include_router(admin_routes.router)
+app.include_router(pdf_routes.router)
 
 
 @app.exception_handler(Redirect)

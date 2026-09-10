@@ -90,11 +90,19 @@
       </p>
     </div>
     <div class="hero-cta">
-      <a class="btn btn-accent btn-lg hero-btn btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register now</a>
+      {% if site_state.registration_open %}
+        <a class="btn btn-accent btn-lg hero-btn" href="/registerinfrasure">Register now</a>
+      {% else %}
+        <a class="btn btn-accent btn-lg hero-btn btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register now</a>
+      {% endif %}
       <a class="hero-link" href="#submit">Submit your work <span aria-hidden="true">&rarr;</span></a>
       <a class="hero-link" href="/sponsorship">Become a sponsor <span aria-hidden="true">&rarr;</span></a>
     </div>
-    <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.9); text-shadow: 0 1px 8px rgba(0,0,0,.45);">Registration will start soon</p>
+    {% if site_state.registration_open %}
+      <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.9); text-shadow: 0 1px 8px rgba(0,0,0,.45);">Registration is open — create your account to get started</p>
+    {% else %}
+      <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.9); text-shadow: 0 1px 8px rgba(0,0,0,.45);">Registration will start soon</p>
+    {% endif %}
   </div>
 </section>
 
@@ -271,9 +279,17 @@
         <p class="submit-lead">Present at {{ config.name }}</p>
         <p class="submit-lead">PPT or Poster, up to 2 per student.</p>
         <div class="submit-cta">
-          <a class="btn btn-accent btn-lg btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Submit your work <span aria-hidden="true">&rarr;</span></a>
+          {% if site_state.round1_open %}
+            <a class="btn btn-accent btn-lg" href="/registerinfrasure">Submit your work <span aria-hidden="true">&rarr;</span></a>
+          {% else %}
+            <a class="btn btn-accent btn-lg btn-disabled-temp" href="/register" title="Submissions will open soon" aria-disabled="true" tabindex="-1">Submit your work <span aria-hidden="true">&rarr;</span></a>
+          {% endif %}
         </div>
-        <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.75);">Registration will start soon</p>
+        {% if site_state.round1_open %}
+          <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.75);">Round 1 submissions are open — create an account and apply</p>
+        {% else %}
+          <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.75);">Submissions will open soon</p>
+        {% endif %}
       </div>
       <ul class="submit-rules">
         {% for r in config.submit_rules %}

@@ -3,24 +3,102 @@
 Everything two-or-more routers need lives here so routes stay thin and the
 permission rules (theme scoping, self-lockout, round rules) are defined once.
 
-Submission model: every presentation is a *single* record in `submissions.json`
-that holds both rounds side by side — Round 1 (``title_r1`` + ``description_r1``)
-and Round 2 (``title_r2`` + ``description_r2``, once submitted). Theme and
-submission format are fixed at Round 1. The record's status walks the whole
-lifecycle, and the student's ``submission_ids`` back-references the thread.
+Submission model (phase 2): every presentation is a *single* record in
+`submissions.json`. Round 1 is title + abstract only; the theme incharge routes
+it to a reviewer (or reviews it themselves) and records Selected for Round 2 /
+Not Selected with feedback. If selected, the student picks the format (PPT or
+Poster) for Round 2 — recorded on ``format``. Round 2 content is then submitted
+(a revised title + abstract for Poster, a PDF upload for PPT); it is editable
+until the Round 2 reviewer (or the incharge) starts reviewing. The final
+decision is Selected / Not Selected. Payment arrives in a later phase.
+The student's ``submission_ids`` back-references the thread.
 """
+import os
 from datetime import datetime
 
 from app_routes.schemas import MAX_SUBMISSIONS, THEME_LABELS
 from auth import hash_password
 from db import find, insert, load, one, save, update
+from site_config import BASE_DIR, SITE_CONFIG
 
-REVIEW_DECISIONS = ("selected", "not_selected")
-REVIEWED = frozenset(REVIEW_DECISIONS)
+ROUND1_DECISIONS = ("r1_selected", "r1_not_selected")
+ROUND1_OPEN = ("r1_pending", "r1_under_review")
+FINAL_DECISIONS = ("selected", "not_selected")
+ROUND2_OPEN = ("r2_pending", "r2_under_review")
+FORMATS = ("ppt", "poster")
+
+UPLOAD_DIR = os.path.join(BASE_DIR, "data", "uploads")
+
+# Field names per round — lets assign/unassign/takeover work for both rounds.
+ROUND_FIELDS = {
+    1: {"status": "r1_status", "reviewer": "r1_reviewer_id", "comment": "r1_comment", "reviewed_by": "r1_reviewed_by",
+        "reviewed_at": "r1_reviewed_at", "open": "r1_pending", "under": "r1_under_review"},
+    2: {"status": "r2_status", "reviewer": "r2_reviewer_id", "comment": "r2_comment", "reviewed_by": "r2_reviewed_by",
+        "reviewed_at": "r2_reviewed_at", "open": "r2_pending", "under": "r2_under_review"},
+}
+
+# Admin phase-control toggles. `False` = closed / not declared.
+SITE_FLAG_KEYS = (
+    "registration_open",
+    "round1_open",
+    "round1_results_declared",
+    "round2_open",
+    "round2_results_declared",
+    "payment_open",
+)
+
+SITE_FLAG_DEFAULTS = {k: False for k in SITE_FLAG_KEYS}
+
+SITE_FLAG_LABELS = {
+    "registration_open": "Registration",
+    "round1_open": "Round 1 entry",
+    "round1_results_declared": "Round 1 results",
+    "round2_open": "Round 2 entry",
+    "round2_results_declared": "Round 2 results",
+    "payment_open": "Payment",
+}
+
+SITE_FLAG_HINTS = {
+    "registration_open": "Students can create accounts and save their participant details.",
+    "round1_open": "Students can apply with a title + abstract and edit pending submissions.",
+    "round1_results_declared": "Students can see the Round 1 outcome and move into Round 2.",
+    "round2_open": "Students can choose a format and submit Round 2 content (poster form / PDF).",
+    "round2_results_declared": "Students can see the final decision and become payment-eligible.",
+    "payment_open": "Selected participants can mark their registration fee as paid.",
+}
 
 
 def now() -> str:
     return datetime.now().isoformat(timespec="seconds")
+
+
+# ---------- admin phase controls ----------
+
+def site_state() -> dict:
+    """The admin phase-control record — seeded (all closed) on first access."""
+    rec = one("site_state", id="phase")
+    if not rec:
+        rec = {"id": "phase", **SITE_FLAG_DEFAULTS, "updated_by": "", "updated_at": now()}
+        insert("site_state", rec, prefix="x")
+        return rec
+    out = {"id": rec["id"], "updated_by": rec.get("updated_by") or "", "updated_at": rec.get("updated_at") or ""}
+    for k in SITE_FLAG_KEYS:
+        out[k] = bool(rec.get(k, False))
+    return out
+
+
+def site_flag(name: str) -> bool:
+    return bool(site_state().get(name, False))
+
+
+def set_site_flag(flag: str, actor: dict):
+    """Flip one phase toggle. Returns (state, flash_code | None)."""
+    if flag not in SITE_FLAG_KEYS:
+        return None, "control_not_found"
+    state = site_state()
+    state[flag] = not state[flag]
+    update("site_state", "phase", {flag: state[flag], "updated_by": actor["id"], "updated_at": now()})
+    return state, None
 
 
 # ---------- users ----------
@@ -121,7 +199,8 @@ def set_reviewer_themes(uid: str, themes: list[str]):
 # ---------- student gates ----------
 
 def has_selected_submission(user: dict) -> bool:
-    return any(s["status"] == "selected" for s in find("submissions", user_id=user["id"]))
+    """True once a presentation has been *finally* selected (Round 2 decision)."""
+    return any(s.get("r2_status") == "selected" for s in find("submissions", user_id=user["id"]))
 
 
 def registration_for(user: dict) -> dict | None:
@@ -190,73 +269,54 @@ def thread_count(user: dict) -> int:
 
 # ---------- submissions / threads ----------
 
-def has_round2(sub: dict) -> bool:
-    """Round 2 exists once any of its fields / timestamp is filled in."""
-    return bool((sub.get("title_r2") or "").strip()
-                or (sub.get("description_r2") or "").strip()
-                or sub.get("round2_submitted_at"))
-
-
-def sub_round(sub: dict) -> int:
-    return 2 if has_round2(sub) else 1
-
-
-def current_title(sub: dict) -> str:
-    return (sub.get("title_r2") or "").strip() or (sub.get("title_r1") or "").strip()
-
-
-def current_description(sub: dict) -> str:
-    return (sub.get("description_r2") or "").strip() or (sub.get("description_r1") or "").strip()
+def format_chosen(sub: dict) -> bool:
+    """True once the student has picked PPT or Poster for Round 2."""
+    return (sub.get("format") or "") in FORMATS
 
 
 def round1_view(sub: dict) -> dict:
-    """A copy of the record as its Round-1 self — what students/panels saw first."""
+    """A copy of the record as its Round-1 self — title/abstract + chosen format."""
     out = dict(sub)
-    out["title"] = sub.get("title_r1") or ""
-    out["description"] = sub.get("description_r1") or ""
+    out["title_r1"] = sub.get("title_r1") or ""
+    out["description_r1"] = sub.get("description_r1") or ""
+    out["title"] = out["title_r1"]
+    out["description"] = out["description_r1"]
+    out["format"] = sub.get("format") or ""
     out["round"] = 1
     return out
 
 
-def round2_view(sub: dict) -> dict | None:
-    """A Round-2 view of the record (current title/abstract + decision), or None."""
-    if not has_round2(sub):
-        return None
-    return {
-        "id": sub["id"],
-        "submission_type": sub.get("submission_type") or "",
-        "theme": sub.get("theme") or "",
-        "title": sub.get("title_r2") or "",
-        "description": sub.get("description_r2") or "",
-        "status": sub["status"],
-        "review_comment": sub.get("review_comment") or "",
-        "reviewed_by": sub.get("reviewed_by") or "",
-        "reviewed_at": sub.get("reviewed_at") or "",
-        "created_at": sub.get("round2_submitted_at") or "",
-        "round": 2,
-    }
-
-
-def current_view(sub: dict) -> dict:
-    """The record as it stands today — current title/abstract/round for listings."""
-    out = dict(sub)
-    out["title"] = current_title(sub)
-    out["description"] = current_description(sub)
-    out["round"] = sub_round(sub)
+def round2_view(sub: dict) -> dict:
+    """The record as its Round-2 self — Round-1 details plus revised content / PDF / final status."""
+    out = round1_view(sub)
+    out["title_r2"] = sub.get("title_r2") or ""
+    out["description_r2"] = sub.get("description_r2") or ""
+    out["has_pdf"] = bool(sub.get("pdf_name"))
+    out["pdf_name"] = sub.get("pdf_name") or ""
+    out["pdf_size"] = sub.get("pdf_size") or 0
+    out["pdf_uploaded_at"] = sub.get("pdf_uploaded_at") or ""
+    out["r2_status"] = sub.get("r2_status") or ""
+    out["r2_reviewer_id"] = sub.get("r2_reviewer_id") or ""
+    out["r2_comment"] = sub.get("r2_comment") or ""
+    out["r2_reviewed_by"] = sub.get("r2_reviewed_by") or ""
+    out["r2_reviewed_at"] = sub.get("r2_reviewed_at") or ""
+    out["content_received_at"] = sub.get("content_received_at") or ""
+    out["title"] = out["title_r2"] or out["title_r1"]
+    out["description"] = out["description_r2"] or out["description_r1"]
+    out["round"] = 2
     return out
 
 
-def round2_of(sub: dict) -> dict | None:
-    return round2_view(sub)
+def current_view(sub: dict) -> dict:
+    """The record as it stands today — Round 1 until Round 2 content is submitted."""
+    if sub.get("r2_status"):
+        return round2_view(sub)
+    return round1_view(sub)
 
 
-def thread_submissions(sub: dict) -> list:
-    """Both round views of a thread, round-ordered (may be just Round 1)."""
-    views = [round1_view(sub)]
-    r2 = round2_view(sub)
-    if r2:
-        views.append(r2)
-    return views
+def content_received(sub: dict) -> bool:
+    """True once the student has submitted Round 2 content (poster form or PPT PDF)."""
+    return bool(sub.get("r2_status"))
 
 
 def submission_for(user: dict, sid: str):
@@ -269,26 +329,33 @@ def submission_for(user: dict, sid: str):
     return sub, None
 
 
-def create_round1(user: dict, submission_type: str, theme: str, title: str, description: str) -> dict:
-    """Open a new presentation thread. Round 1 fields set now; Round 2 stays empty."""
+def create_round1(user: dict, theme: str, title: str, description: str) -> dict:
+    """Open a new presentation thread — Round 1 is title + abstract only."""
     record = insert(
         "submissions",
         {
             "user_id": user["id"],
-            "submission_type": submission_type,
             "theme": theme,
             "title_r1": title,
             "description_r1": description,
+            "r1_status": "r1_pending",
+            "r1_reviewer_id": "",
+            "r1_comment": "",
+            "r1_reviewed_by": "",
+            "r1_reviewed_at": "",
+            "format": "",
+            "format_chosen_at": "",
             "title_r2": "",
             "description_r2": "",
-            "round2_submitted_at": "",
-            "status": "pending",
-            "assigned_reviewer_id": "",
-            "reviewer_comment": "",
-            "reviewer_reviewed_at": "",
-            "reviewed_by": "",
-            "review_comment": "",
-            "reviewed_at": "",
+            "pdf_name": "",
+            "pdf_size": 0,
+            "pdf_uploaded_at": "",
+            "r2_status": "",
+            "r2_reviewer_id": "",
+            "r2_comment": "",
+            "r2_reviewed_by": "",
+            "r2_reviewed_at": "",
+            "content_received_at": "",
             "created_at": now(),
         },
         prefix="s",
@@ -298,47 +365,111 @@ def create_round1(user: dict, submission_type: str, theme: str, title: str, desc
     return record
 
 
-def submit_round2(user: dict, sid: str, title: str, description: str):
-    """Record the Round-2 revision on the same thread after Round-1 feedback.
-
-    Returns (submission, flash_code | None).
-    """
+def choose_format(user: dict, sid: str, fmt: str):
+    """Student picks PPT or Poster for Round 2 — per submission, independently."""
     sub = one("submissions", id=sid)
     if not sub or sub["user_id"] != user["id"]:
         return None, "submission_not_found"
-    if sub["status"] != "feedback_given":
+    if sub["r1_status"] != "r1_selected":
         return None, "round2_not_ready"
-    if has_round2(sub):
-        return None, "round2_already_exists"
-    update(
-        "submissions",
-        sid,
-        {
-            "title_r2": title,
-            "description_r2": description,
-            "round2_submitted_at": now(),
-            "status": "awaiting_decision",
-        },
-    )
+    if format_chosen(sub):
+        return None, "format_already_chosen"
+    if fmt not in FORMATS:
+        return None, "bad_format"
+    update("submissions", sid, {"format": fmt, "format_chosen_at": now()})
     return sub, None
 
 
-def apply_round1_feedback(user: dict, sid: str, comment: str):
-    """Round 1 feedback from a reviewer or an incharge — questions / changes only.
+def _r2_submission_gate(user: dict, sid: str):
+    """Shared checks before Round-2 content is submitted. Returns (sub, flash_code | None)."""
+    sub = one("submissions", id=sid)
+    if not sub or sub["user_id"] != user["id"]:
+        return None, "submission_not_found"
+    if sub["r1_status"] != "r1_selected":
+        return None, "round2_not_ready"
+    if not format_chosen(sub):
+        return None, "round2_not_ready"
+    if sub.get("r2_status") in ("r2_under_review", "selected", "not_selected"):
+        return None, "content_locked"
+    return sub, None
 
-    Reviewer must be assigned (under_review); incharge needs theme scope and can
-    also feed back on a `pending` submission if they take it over themselves.
+
+def submit_round2_content(user: dict, sid: str, title: str, description: str):
+    """Poster: save the revised Round 2 title + abstract (editable until review starts)."""
+    sub, err = _r2_submission_gate(user, sid)
+    if err:
+        return None, err
+    if (sub.get("format") or "") != "poster":
+        return None, "bad_format"
+    first = not sub.get("r2_status")
+    update("submissions", sid, {
+        "title_r2": title,
+        "description_r2": description,
+        "r2_status": "r2_pending",
+        "content_received_at": now() if first else sub.get("content_received_at") or now(),
+    })
+    return sub, None
+
+
+def upload_round2_pdf(user: dict, sid: str, filename: str, data: bytes):
+    """PPT: validate + store the uploaded PDF and mark Round 2 content as pending."""
+    sub, err = _r2_submission_gate(user, sid)
+    if err:
+        return None, err
+    if (sub.get("format") or "") != "ppt":
+        return None, "bad_format"
+    if not data or not data.startswith(b"%PDF"):
+        return None, "bad_pdf_type"
+    max_bytes = int(SITE_CONFIG.get("max_pdf_mb", 25)) * 1024 * 1024
+    if len(data) > max_bytes:
+        return None, "pdf_too_large"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    path = os.path.join(UPLOAD_DIR, f"{sid}.pdf")
+    with open(path, "wb") as f:
+        f.write(data)
+    first = not sub.get("r2_status")
+    update("submissions", sid, {
+        "pdf_name": (filename or "submission.pdf").strip()[:255] or "submission.pdf",
+        "pdf_size": len(data),
+        "pdf_uploaded_at": now(),
+        "r2_status": "r2_pending",
+        "content_received_at": now() if first else sub.get("content_received_at") or now(),
+    })
+    return sub, None
+
+
+def pdf_path(sid: str) -> str:
+    return os.path.join(UPLOAD_DIR, f"{sid}.pdf")
+
+
+def can_view_pdf(user: dict, sub: dict) -> bool:
+    """Who may open the Round-2 PDF: the owner, theme-scoped incharge, assigned
+    Round-2 reviewer, or a master admin."""
+    if user["role"] == "student":
+        return sub["user_id"] == user["id"]
+    if user["role"] == "theme_incharge":
+        return sub["theme"] in (user.get("themes") or [])
+    if user["role"] == "reviewer":
+        return sub.get("r2_reviewer_id") == user["id"]
+    return user["role"] == "master_admin"
+
+
+def apply_round1_decision(user: dict, sid: str, decision: str, comment: str):
+    """Round 1 decision — Selected for Round 2, or Not Selected (dead end).
+
+    The assigned reviewer decides when a submission is under review; the theme
+    incharge decides on any open submission in their theme (or takes it over).
     Returns (submission, flash_code | None).
     """
     sub = one("submissions", id=sid)
     if not sub:
         return None, "submission_not_found"
-    if has_round2(sub):
+    if sub["r1_status"] not in ROUND1_OPEN:
         return None, "bad_status"
-    if sub["status"] not in ("pending", "under_review"):
-        return None, "bad_status"
+    if decision not in ROUND1_DECISIONS:
+        return None, "bad_decision"
     if user["role"] == "reviewer":
-        if sub.get("assigned_reviewer_id") != user["id"] or sub["status"] != "under_review":
+        if sub.get("r1_reviewer_id") != user["id"] or sub["r1_status"] != "r1_under_review":
             return None, "not_your_assignment"
     elif user["role"] == "theme_incharge" and sub["theme"] not in (user.get("themes") or []):
         return None, "not_your_theme"
@@ -346,68 +477,80 @@ def apply_round1_feedback(user: dict, sid: str, comment: str):
         "submissions",
         sid,
         {
-            "reviewer_comment": comment.strip()[:1000],
-            "reviewer_reviewed_at": now(),
-            "status": "feedback_given",
+            "r1_status": decision,
+            "r1_comment": comment.strip()[:1000],
+            "r1_reviewed_by": user["id"],
+            "r1_reviewed_at": now(),
         },
     )
-    return sub, None
-
-
-def assign_reviewer(user: dict, sid: str, reviewer: dict):
-    """Assign an eligible reviewer to a pending Round-1 submission."""
-    sub, err = submission_for(user, sid)
-    if err:
-        return None, err
-    if has_round2(sub):
-        return None, "bad_status"
-    if sub["status"] != "pending":
-        return None, "submission_not_pending"
-    if reviewer.get("role") != "reviewer":
-        return None, "reviewer_not_found"
-    if sub["theme"] not in (reviewer.get("themes") or []):
-        return None, "reviewer_theme_mismatch"
-    update("submissions", sid, {"assigned_reviewer_id": reviewer["id"], "status": "under_review"})
-    return sub, None
-
-
-def unassign_reviewer(user: dict, sid: str):
-    """Remove the assigned reviewer from a Round-1 submission and re-open it as pending."""
-    sub, err = submission_for(user, sid)
-    if err:
-        return None, err
-    if has_round2(sub) or not sub.get("assigned_reviewer_id"):
-        return None, "no_reviewer_assigned"
-    update("submissions", sid, {
-        "assigned_reviewer_id": "",
-        "reviewer_comment": "",
-        "reviewer_reviewed_at": "",
-        "status": "pending",
-    })
     return sub, None
 
 
 def apply_final_decision(user: dict, sid: str, decision: str, comment: str):
-    """Theme incharge (or admin override) decides Selected / Not Selected once Round 2 is in."""
-    sub, err = submission_for(user, sid)
-    if err:
-        return None, err
-    if not has_round2(sub):
+    """Final decision — Selected, or Not Selected (dead end).
+
+    The assigned Round-2 reviewer decides when a submission is under review; the
+    theme incharge decides on any Round-2-pending submission in their theme (or
+    takes it over). Returns (submission, flash_code | None).
+    """
+    sub = one("submissions", id=sid)
+    if not sub:
+        return None, "submission_not_found"
+    if sub.get("r2_status") not in ROUND2_OPEN:
         return None, "bad_status"
-    if sub["status"] != "awaiting_decision":
-        return None, "bad_status"
-    if decision not in REVIEW_DECISIONS:
+    if decision not in FINAL_DECISIONS:
         return None, "bad_decision"
+    if user["role"] == "reviewer":
+        if sub.get("r2_reviewer_id") != user["id"] or sub.get("r2_status") != "r2_under_review":
+            return None, "not_your_assignment"
+    elif user["role"] == "theme_incharge" and sub["theme"] not in (user.get("themes") or []):
+        return None, "not_your_theme"
     update(
         "submissions",
         sid,
         {
-            "status": decision,
-            "reviewed_by": user["id"],
-            "review_comment": comment.strip()[:1000],
-            "reviewed_at": now(),
+            "r2_status": decision,
+            "r2_comment": comment.strip()[:1000],
+            "r2_reviewed_by": user["id"],
+            "r2_reviewed_at": now(),
         },
     )
+    return sub, None
+
+
+def assign_reviewer(user: dict, sid: str, reviewer: dict, round_no: int = 1):
+    """Assign an eligible reviewer to an open (pending) submission in the given round."""
+    sub, err = submission_for(user, sid)
+    if err:
+        return None, err
+    f = ROUND_FIELDS[round_no]
+    if sub.get(f["status"]) != f["open"]:
+        return None, "submission_not_pending"
+    if round_no == 2 and not sub.get("r2_status"):
+        return None, "need_content"
+    if reviewer.get("role") != "reviewer":
+        return None, "reviewer_not_found"
+    if sub["theme"] not in (reviewer.get("themes") or []):
+        return None, "reviewer_theme_mismatch"
+    update("submissions", sid, {f["reviewer"]: reviewer["id"], f["status"]: f["under"]})
+    return sub, None
+
+
+def unassign_reviewer(user: dict, sid: str, round_no: int = 1):
+    """Remove the assigned reviewer in the given round and re-open it as pending."""
+    sub, err = submission_for(user, sid)
+    if err:
+        return None, err
+    f = ROUND_FIELDS[round_no]
+    if sub.get(f["status"]) != f["under"] or not sub.get(f["reviewer"]):
+        return None, "no_reviewer_assigned"
+    update("submissions", sid, {
+        f["reviewer"]: "",
+        f["comment"]: "",
+        f["reviewed_by"]: "",
+        f["reviewed_at"]: "",
+        f["status"]: f["open"],
+    })
     return sub, None
 
 
@@ -422,70 +565,70 @@ def scoped_submissions(user: dict) -> list:
     return sorted(subs, key=lambda s: s.get("created_at", ""), reverse=True)
 
 
-def filter_submissions(subs: list, theme: str = "", status: str = "", stype: str = "", round_no: str = "") -> list:
+def filter_submissions(subs: list, theme: str = "", status: str = "", stype: str = "", round_no: int = 1) -> list:
     if theme:
         subs = [s for s in subs if s["theme"] == theme]
     if stype:
-        subs = [s for s in subs if s["submission_type"] == stype]
-    if round_no == "1":
-        subs = [s for s in subs if not has_round2(s)]
-    elif round_no == "2":
-        subs = [s for s in subs if has_round2(s)]
-    if status == "pending":
-        subs = [s for s in subs if s["status"] == "pending"]
-    elif status == "reviewed":
-        subs = [s for s in subs if s["status"] in REVIEWED]
-    elif status:
-        subs = [s for s in subs if s["status"] == status]
+        subs = [s for s in subs if (s.get("format") or "") == stype]
+    if status:
+        key = "r2_status" if round_no == 2 else "r1_status"
+        subs = [s for s in subs if (s.get(key) or "") == status]
     return subs
 
 
-def decorated_subs(subs: list, students: dict, action_fn) -> list:
+def decorated_subs(subs: list, students: dict, action_fn, round_no: int = 1) -> list:
     """Decorate each submission with current view fields, `_student`, `_reviewer`, `_round`, `_actions`."""
     out = []
     for s in subs:
         row = current_view(s)
         row["_student"] = (students.get(s["user_id"]) or {}).get("name", "—")
-        rev = students.get(s.get("assigned_reviewer_id")) or {}
+        reviewer_key = "r2_reviewer_id" if round_no == 2 else "r1_reviewer_id"
+        rev = students.get(s.get(reviewer_key)) or {}
         row["_reviewer"] = rev.get("name", "") or ""
         row["_actions"] = action_fn(s)
         out.append(row)
     return out
 
 
-def submission_actions(user: dict, s: dict) -> list:
+def submission_actions(user: dict, s: dict, round_no: int = 1) -> list:
     """Role-aware row actions for the incharge/admin submission tables."""
     actions = []
-    if not has_round2(s):
-        if s["status"] == "pending":
+    if round_no == 1:
+        if s["r1_status"] == "r1_pending":
             actions.append({"url": f"/incharge/assign/{s['id']}", "label": "Assign reviewer", "cls": "btn-primary"})
             actions.append({"url": f"/incharge/review/{s['id']}", "label": "Review myself", "cls": "btn-outline"})
-        elif s["status"] == "under_review":
+        elif s["r1_status"] == "r1_under_review":
             actions.append({"url": f"/incharge/change_reviewer/{s['id']}", "label": "Change reviewer", "cls": "btn-outline"})
-    elif s["status"] == "awaiting_decision":
-        actions.append({"url": f"/incharge/review/{s['id']}", "label": "Make decision", "cls": "btn-primary"})
-    elif s["status"] in REVIEWED:
-        actions.append({"url": f"/incharge/review/{s['id']}", "label": "Change decision", "cls": "btn-outline"})
+    elif s.get("r2_status") == "r2_pending":
+        actions.append({"url": f"/incharge/assign/{s['id']}/round2", "label": "Assign Round 2 reviewer", "cls": "btn-primary"})
+        actions.append({"url": f"/incharge/review/{s['id']}/round2", "label": "Review myself", "cls": "btn-outline"})
+    elif s.get("r2_status") == "r2_under_review":
+        actions.append({"url": f"/incharge/change_reviewer/{s['id']}/round2", "label": "Change reviewer", "cls": "btn-outline"})
     return actions
 
 
-def detail_actions(user: dict, s: dict) -> list:
+def detail_actions(user: dict, s: dict, round_no: int = 1) -> list:
     """Buttons for a submission detail page (side panel)."""
-    actions = submission_actions(user, s)
-    if not has_round2(s):
-        if s["status"] == "pending":
-            actions.append({"url": f"/incharge/review/{s['id']}", "label": "Review myself", "cls": "btn-outline"})
-        elif s["status"] in ("under_review",) and s.get("assigned_reviewer_id"):
+    actions = submission_actions(user, s, round_no)
+    if round_no == 1:
+        if s["r1_status"] == "r1_under_review" and s.get("r1_reviewer_id"):
             actions.append({"url": f"/incharge/takeover/{s['id']}", "label": "Take over & review myself", "cls": "btn-accent"})
+    elif s.get("r2_status") == "r2_under_review" and s.get("r2_reviewer_id"):
+        actions.append({"url": f"/incharge/takeover/{s['id']}/round2", "label": "Take over & review myself", "cls": "btn-accent"})
     return actions
 
 
 # ---------- reviewer scope ----------
 
 def reviewer_submissions(reviewer: dict) -> list:
-    """Submissions assigned to this reviewer (Round 1 — before Round 2 exists)."""
-    subs = [s for s in load("submissions")
-            if s.get("assigned_reviewer_id") == reviewer["id"] and not has_round2(s)]
+    """Round-1 submissions assigned to this reviewer."""
+    subs = [s for s in load("submissions") if s.get("r1_reviewer_id") == reviewer["id"]]
+    return sorted(subs, key=lambda s: s.get("created_at", ""), reverse=True)
+
+
+def reviewer_round2_submissions(reviewer: dict) -> list:
+    """Round-2 submissions assigned to this reviewer."""
+    subs = [s for s in load("submissions") if s.get("r2_reviewer_id") == reviewer["id"]]
     return sorted(subs, key=lambda s: s.get("created_at", ""), reverse=True)
 
 

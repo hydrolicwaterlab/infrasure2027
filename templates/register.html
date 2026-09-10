@@ -12,14 +12,14 @@
         <li>Choose any of the <strong>9 conference themes</strong></li>
         <li>Track your selection status live</li>
       </ul>
-      <p class="auth-aside-note">Already registered? <a href="/login12345">Log in</a>.</p>
+      <p class="auth-aside-note">Already registered? <a href="/logininfrasure">Log in</a>.</p>
     </aside>
 
     <div class="auth-card">
       <h1 class="auth-title">Create your account</h1>
       <p class="auth-sub">For students, researchers, and early-career engineers.</p>
       {% include "_form_errors.html" %}
-      <form method="post" action="/register12345" novalidate>
+      <form method="post" action="/registerinfrasure" novalidate>
         <div class="field">
           <label for="name">Full name</label>
           <input type="text" id="name" name="name" value="{{ values.name if values else '' }}" autocomplete="name" required autofocus />

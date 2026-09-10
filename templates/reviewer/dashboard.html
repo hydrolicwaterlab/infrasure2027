@@ -7,11 +7,11 @@
   <div class="container dash-head">
     <div>
       <p class="eyebrow eyebrow-on-dark">Reviewer panel</p>
-      <h1 class="display display-on-dark">Review Round&nbsp;1 submissions assigned to you.</h1>
-      <p class="page-head-sub">Send feedback, questions, or requested changes — you do not select anything. The theme incharge decides after the student submits Round&nbsp;2.</p>
+      <h1 class="display display-on-dark">Review submissions assigned to you.</h1>
+      <p class="page-head-sub">Round 1 decides Selected for Round 2 / Not Selected; Round 2 decides the final Selected / Not Selected outcome.</p>
     </div>
     <div class="page-head-stats">
-      <span class="quick-stat"><strong>{{ to_review | length }}</strong> to review</span>
+      <span class="quick-stat"><strong>{{ to_review | length + r2_to_review | length }}</strong> to review</span>
     </div>
   </div>
 </section>
@@ -33,7 +33,7 @@
             <tbody>
               {% for s in to_review %}
                 <tr>
-                  <td>{{ ui.type_badge(s.submission_type) }}<div class="round-tag">{{ ui.round_badge(1) }}</div></td>
+                  <td>{{ ui.type_badge(s.format) }}<div class="round-tag">{{ ui.round_badge(1) }}</div></td>
                   <td><span class="theme-label">{{ s.theme }}</span><small class="cell-sub">{{ ui.theme_name(s.theme, themes) }}</small></td>
                   <td>{{ s._student }}</td>
                   <td>
@@ -42,7 +42,7 @@
                   </td>
                   <td>{{ (s.created_at or "")[:10] }}</td>
                   <td class="cell-actions">
-                    <a class="btn btn-sm btn-primary" href="/reviewer/review/{{ s.id }}">Give feedback</a>
+                    <a class="btn btn-sm btn-primary" href="/reviewer/review/{{ s.id }}">Decide</a>
                   </td>
                 </tr>
               {% endfor %}
@@ -56,25 +56,73 @@
 
     <div class="panel">
       <div class="panel-head">
-        <h2 class="panel-title">Feedback you already sent</h2>
+        <h2 class="panel-title">Round 2 — assigned to you</h2>
       </div>
-      {% if done %}
+      {% if r2_to_review %}
         <div class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Format</th><th>Theme</th><th>Student</th><th>Title</th><th>Status</th><th>Feedback sent</th>
+                <th>Format</th><th>Theme</th><th>Student</th><th>Title</th><th>Content</th><th class="th-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in r2_to_review %}
+                <tr>
+                  <td>{{ ui.type_badge(s.format) }}<div class="round-tag">{{ ui.round_badge(2) }}</div></td>
+                  <td><span class="theme-label">{{ s.theme }}</span><small class="cell-sub">{{ ui.theme_name(s.theme, themes) }}</small></td>
+                  <td>{{ s._student }}</td>
+                  <td>
+                    <span class="cell-title">{{ s.title }}</span>
+                    <small class="cell-sub">{{ s.description | truncate(110) }}</small>
+                  </td>
+                  <td>{% if s.has_pdf %}{{ ui.pdf_badge() }}{% else %}Abstract{% endif %}</td>
+                  <td class="cell-actions">
+                    <a class="btn btn-sm btn-primary" href="/reviewer/review/{{ s.id }}/round2">Decide</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ ui.empty_state("Nothing to review yet", "Round 2 submissions appear here once the incharge assigns them to you.") }}
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Decisions you already recorded</h2>
+      </div>
+      {% if done or r2_done %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Round</th><th>Format</th><th>Theme</th><th>Student</th><th>Title</th><th>Status</th><th>Decided</th>
               </tr>
             </thead>
             <tbody>
               {% for s in done %}
                 <tr>
-                  <td>{{ ui.type_badge(s.submission_type) }}</td>
+                  <td>{{ ui.round_badge(1) }}</td>
+                  <td>{{ ui.type_badge(s.format) }}</td>
                   <td><span class="theme-label">{{ s.theme }}</span></td>
                   <td>{{ s._student }}</td>
                   <td><span class="cell-title">{{ s.title }}</span></td>
-                  <td>{{ ui.status_badge(s.status) }}</td>
-                  <td>{{ (s.reviewer_reviewed_at or "")[:10] }}</td>
+                  <td>{{ ui.status_badge(s.r1_status) }}</td>
+                  <td>{{ (s.r1_reviewed_at or "")[:10] }}</td>
+                </tr>
+              {% endfor %}
+              {% for s in r2_done %}
+                <tr>
+                  <td>{{ ui.round_badge(2) }}</td>
+                  <td>{{ ui.type_badge(s.format) }}</td>
+                  <td><span class="theme-label">{{ s.theme }}</span></td>
+                  <td>{{ s._student }}</td>
+                  <td><span class="cell-title">{{ s.title }}</span></td>
+                  <td>{{ ui.status_badge(s.r2_status) }}</td>
+                  <td>{{ (s.r2_reviewed_at or "")[:10] }}</td>
                 </tr>
               {% endfor %}
             </tbody>

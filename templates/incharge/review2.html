@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui %}
-{% block title %}Round 1 decision — {{ config.name }}{% endblock %}
+{% block title %}Round 2 decision — {{ config.name }}{% endblock %}
 {% block content %}
 
 <section class="page-head page-head-compact">
   <div class="container">
-    <p class="eyebrow eyebrow-on-dark">Review · {{ sub.id }}</p>
+    <p class="eyebrow eyebrow-on-dark">Review · {{ sub.id }} · Round 2</p>
     <h1 class="display display-on-dark">{{ sub.title }}</h1>
     <p class="page-head-sub">
-      Decide whether this Round 1 moves to Round 2 — Selected for Round 2, or Not Selected. Your feedback is shown to the student.
+      Decide the final outcome — Selected, or Not Selected. Your feedback is shown to the student.
     </p>
   </div>
 </section>
@@ -17,16 +17,23 @@
   <div class="container review-grid">
     <div class="panel review-sub">
       {{ ui.submission_detail(sub, students, themes) }}
+
+      {% if sub.format == "ppt" and sub.has_pdf %}
+        <div class="pdf-viewer-wrap">
+          <p class="sub-review-label">In-browser preview</p>
+          <iframe class="pdf-viewer" src="/pdf/{{ sub.id }}" title="{{ sub.pdf_name }}"></iframe>
+        </div>
+      {% endif %}
     </div>
 
     <div class="panel form-card review-form">
       {% include "_form_errors.html" %}
-      <form method="post" action="/incharge/review/{{ sub.id }}" novalidate>
+      <form method="post" action="/incharge/review/{{ sub.id }}/round2" novalidate>
         <fieldset class="form-block">
           <legend class="form-legend">Your decision</legend>
           <div class="form-actions form-actions-stack">
-            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="r1_selected">Selected for Round 2</button>
-            <button class="btn btn-danger btn-lg btn-block" type="submit" name="decision" value="r1_not_selected"
+            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="selected">Selected</button>
+            <button class="btn btn-danger btn-lg btn-block" type="submit" name="decision" value="not_selected"
                     onclick="return confirm('Not selected ends this submission — the student cannot resubmit it. Continue?')">Not selected</button>
           </div>
         </fieldset>

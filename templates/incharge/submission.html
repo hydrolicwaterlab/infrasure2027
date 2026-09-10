@@ -8,14 +8,10 @@
     <p class="eyebrow eyebrow-on-dark">Submission · {{ sub.id }}</p>
     <h1 class="display display-on-dark">{{ sub.title }}</h1>
     <p class="page-head-sub">
-      {{ ui.type_badge(sub.submission_type) }}
+      {{ ui.type_badge(sub.format) }}
       <span class="badge badge-type">{{ sub.theme }} · {{ ui.theme_name(sub.theme, config.themes) }}</span>
-      {% if thread | length > 1 %}
-        {{ ui.round_badge(1) }}{{ ui.round_badge(2) }}
-      {% else %}
-        {{ ui.round_badge(1) }}
-      {% endif %}
-      {{ ui.status_badge(sub.status) }}
+      {{ ui.round_badge(1) }}{% if sub.r2_status %}{{ ui.round_badge(2) }}{% endif %}
+      {% if sub.r2_status %}{{ ui.status_badge(sub.r2_status) }}{% else %}{{ ui.status_badge(sub.r1_status) }}{% endif %}
     </p>
   </div>
 </section>
@@ -24,33 +20,35 @@
   <div class="container review-grid">
     <div class="panel review-sub">
       {{ ui.submission_detail(sub, students, themes) }}
-      {% if thread | length > 1 %}
-        <h3 class="review-head">Round 1 vs Round 2</h3>
-        {{ ui.thread_compare(thread[0], thread[-1]) }}
-      {% endif %}
     </div>
 
     <div class="panel form-card review-form">
       <h2 class="panel-title">Actions</h2>
-      {% if thread | length == 1 %}
-        {% if sub.status == "pending" %}
-          <p class="side-note">Round 1 — no reviewer yet. Assign one, or review it yourself.</p>
-        {% elif sub.status == "under_review" %}
-          <p class="side-note">The reviewer is working on Round 1. You can change the reviewer or take over.</p>
-        {% elif sub.status == "feedback_given" %}
-          <p class="side-note">Feedback was sent — the student can now submit Round 2.</p>
+      {% if round_no == 2 %}
+        {% if sub.r2_status == "r2_pending" %}
+          <p class="side-note">Round 2 content received — no reviewer yet. Assign one, or decide it yourself.</p>
+        {% elif sub.r2_status == "r2_under_review" %}
+          <p class="side-note">The Round 2 reviewer is working on this submission. You can change the reviewer or take over.</p>
+        {% elif sub.r2_status == "selected" %}
+          <p class="side-note">Final decision: Selected — the presentation is confirmed for INFRASURE 2027.</p>
+        {% elif sub.r2_status == "not_selected" %}
+          <p class="side-note">Final decision: Not selected — the submission ends here.</p>
         {% endif %}
       {% else %}
-        {% if sub.status == "awaiting_decision" %}
-          <p class="side-note">The student submitted Round 2. Compare it with Round 1 and the feedback, then decide Selected / Not Selected.</p>
-        {% elif sub.status in ("selected", "not_selected") %}
-          <p class="side-note">Decision recorded on Round 2. You can change it if needed.</p>
+        {% if sub.r1_status == "r1_pending" %}
+          <p class="side-note">Round 1 — no reviewer yet. Assign one, or review it yourself.</p>
+        {% elif sub.r1_status == "r1_under_review" %}
+          <p class="side-note">The reviewer is working on Round 1. You can change the reviewer or take over.</p>
+        {% elif sub.r1_status == "r1_selected" %}
+          <p class="side-note">Selected for Round 2 — the student chooses their format{% if sub.format %}: {{ "PPT" if sub.format == "ppt" else "Poster" }}{% endif %}.{% if not sub.r2_status %} Round 2 content is pending.{% endif %}</p>
+        {% elif sub.r1_status == "r1_not_selected" %}
+          <p class="side-note">Not selected — this submission ends at Round 1.</p>
         {% endif %}
       {% endif %}
       {% for a in actions %}
         <a class="btn btn-lg btn-block {{ a.get('cls', 'btn-outline') }}" href="{{ a.url }}">{{ a.label }}</a>
       {% endfor %}
-      <a class="btn btn-ghost btn-lg btn-block" href="{{ back_url }}">Back</a>
+      <a class="btn btn-ghost btn-lg btn-block" href="/incharge/dashboard{% if round_no == 2 %}?round=2{% endif %}">Back</a>
     </div>
   </div>
 </section>

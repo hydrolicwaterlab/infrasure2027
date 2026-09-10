@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Phase controls — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Master admin · Phase controls</p>
+    <h1 class="display display-on-dark">Open and close each phase.</h1>
+    <p class="page-head-sub">Flip these switches to gate registration, each round's entry, result announcements, and payment. Reviewers and incharges are never blocked — only the student-facing workflow.</p>
+  </div>
+</section>
+
+<section class="dash-section">
+  <div class="container">
+    <div class="admin-top">
+      {{ ui.admin_nav("controls") }}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Conference workflow</h2>
+        <p class="panel-sub">Declared results are hidden from students until you say so — decisions stay stored either way.</p>
+      </div>
+      <ul class="phase-list">
+        {% for flag, label in labels.items() %}
+          {% set on = state[flag] %}
+          <li class="phase-row">
+            <div class="phase-info">
+              <p class="phase-label">{{ label }}
+                {% if on %}
+                  <span class="badge badge-open">Open</span>
+                {% else %}
+                  <span class="badge badge-closed">Closed</span>
+                {% endif %}
+              </p>
+              <p class="phase-hint">{{ hints[flag] }}</p>
+            </div>
+            <form method="post" action="/admin/controls/{{ flag }}/toggle" class="phase-form">
+              {% if on %}
+                <button class="btn btn-outline" type="submit">Close</button>
+              {% else %}
+                <button class="btn btn-primary" type="submit">Open</button>
+              {% endif %}
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="side-note phase-foot">Last updated{% if state.updated_at %} {{ state.updated_at[:16] }}{% endif %}{% if state.updated_by %} · by {{ (state.updated_by)[:8] }}{% endif %}.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

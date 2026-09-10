@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Choose your format — Round 2 — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Student portal · Round 2</p>
+    <h1 class="display display-on-dark">Choose your presentation format.</h1>
+    <p class="page-head-sub">Round 1 was selected for Round 2. Now decide how you want to present — PPT or Poster.</p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container container-narrow">
+    {% include "_form_errors.html" %}
+
+    <div class="panel form-card">
+      <h2 class="panel-title">Round 1 decision</h2>
+      <dl class="reg-dl">
+        <dt>Your presentation</dt><dd>{{ ui.type_badge(sub.format) }} · {{ sub.theme }} · {{ ui.status_badge(sub.r1_status) }}</dd>
+        {% if sub.r1_reviewer_id %}
+          <dt>Reviewed by</dt><dd>{{ (students.get(sub.r1_reviewer_id) or {}).get("name", "—") or "—" }}{% if sub.r1_reviewed_at %} · {{ sub.r1_reviewed_at[:10] }}{% endif %}</dd>
+        {% endif %}
+      </dl>
+      {% if sub.r1_comment %}
+        <div class="sub-review">
+          <p class="review-quote">“{{ sub.r1_comment }}”</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <form method="post" class="panel form-card" action="/student/submission/{{ sub.id }}/round2" novalidate>
+      <fieldset class="form-block">
+        <legend class="form-legend">How would you like to present?</legend>
+        <div class="choice-row">
+          <label class="choice{% if values.format == 'ppt' %} is-on{% endif %}">
+            <input type="radio" name="format" value="ppt" {% if values.format == 'ppt' %}checked{% endif %} required />
+            <span><strong>PPT</strong><small>Oral presentation slot</small></span>
+          </label>
+          <label class="choice{% if values.format == 'poster' %} is-on{% endif %}">
+            <input type="radio" name="format" value="poster" {% if values.format == 'poster' %}checked{% endif %} />
+            <span><strong>Poster</strong><small>Board in the poster gallery</small></span>
+          </label>
+        </div>
+        <p class="field-hint">Each submission is independent — you can choose PPT for one submission and Poster for another.</p>
+      </fieldset>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-lg" type="submit">Save format</button>
+        <a class="btn btn-ghost btn-lg" href="/student/submission/{{ sub.id }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

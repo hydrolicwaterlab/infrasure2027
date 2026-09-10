@@ -52,8 +52,12 @@
           {% endif %}
           <a class="btn btn-sm btn-ghost" href="/logout">Logout</a>
         {% else %}
-          <a class="btn btn-sm btn-outline btn-disabled-temp" href="/login" title="Registration will start soon" aria-disabled="true" tabindex="-1">Login</a>
-          <a class="btn btn-sm btn-primary btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register</a>
+          <a class="btn btn-sm btn-outline" href="/logininfrasure">Login</a>
+          {% if site_state.registration_open %}
+            <a class="btn btn-sm btn-primary" href="/registerinfrasure">Register</a>
+          {% else %}
+            <a class="btn btn-sm btn-primary btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register</a>
+          {% endif %}
         {% endif %}
       </div>
 
@@ -94,8 +98,12 @@
             {% endif %}
             <a class="btn btn-outline" href="/logout">Logout</a>
           {% else %}
-            <a class="btn btn-outline btn-disabled-temp" href="/login" title="Registration will start soon" aria-disabled="true" tabindex="-1">Login</a>
-            <a class="btn btn-primary btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register</a>
+            <a class="btn btn-outline" href="/logininfrasure">Login</a>
+            {% if site_state.registration_open %}
+              <a class="btn btn-primary" href="/registerinfrasure">Register</a>
+            {% else %}
+              <a class="btn btn-primary btn-disabled-temp" href="/register" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register</a>
+            {% endif %}
           {% endif %}
         </div>
       </div>
@@ -138,8 +146,12 @@
       <div>
         <h4>Quick Links</h4>
         <ul>
-          <li><a href="/register" class="btn-disabled-temp" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register Now</a></li>
-          <li><a href="/login" class="btn-disabled-temp" title="Registration will start soon" aria-disabled="true" tabindex="-1">Login</a></li>
+          <li><a href="/logininfrasure">Login</a></li>
+          {% if site_state.registration_open %}
+            <li><a href="/registerinfrasure">Register Now</a></li>
+          {% else %}
+            <li><a href="/register" class="btn-disabled-temp" title="Registration will start soon" aria-disabled="true" tabindex="-1">Register Now</a></li>
+          {% endif %}
           <li><a href="/#about">About</a></li>
           <li><a href="/#themes">Themes</a></li>
           <li><a href="/#submit">Call for Contributions</a></li>

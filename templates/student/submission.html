@@ -1,20 +1,21 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui %}
-{% block title %}{{ sub.title }} — Round 1 — {{ config.name }}{% endblock %}
+{% block title %}{{ sub.title }} — Round {{ sub.round }} — {{ config.name }}{% endblock %}
 {% block content %}
+{% set declared_r1 = site_state.round1_results_declared %}
+{% set declared_r2 = site_state.round2_results_declared %}
 
 <section class="page-head page-head-compact">
   <div class="container">
-    <p class="eyebrow eyebrow-on-dark">My presentation · Round 1</p>
+    <p class="eyebrow eyebrow-on-dark">My presentation · Round {{ sub.round }}</p>
     <h1 class="display display-on-dark">{{ sub.title }}</h1>
     <p class="page-head-sub">
-      {{ ui.type_badge(sub.submission_type) }}
+      {{ ui.type_badge(sub.format) }}
       <span class="badge badge-type">{{ sub.theme }} · {{ ui.theme_name(sub.theme, config.themes) }}</span>
-      {{ ui.round_badge(1) }}
-      {{ ui.status_badge(sub.status) }}
-      {% if r2 %}
-        {{ ui.round_badge(2) }}{{ ui.status_badge(r2.status) }}
-      {% endif %}
+      {{ ui.round_badge(1) }}{% if sub.r2_status %}{{ ui.round_badge(2) }}{% endif %}
+      {% if sub.r2_status %}
+        {% if sub.r2_status in ("selected", "not_selected") and not declared_r2 %}{{ ui.status_badge("r2_awaiting") }}{% else %}{{ ui.status_badge(sub.r2_status) }}{% endif %}
+      {% elif sub.r1_status in ("r1_selected", "r1_not_selected") and not declared_r1 %}{{ ui.status_badge("r1_awaiting") }}{% else %}{{ ui.status_badge(sub.r1_status) }}{% endif %}
     </p>
   </div>
 </section>
@@ -24,63 +25,91 @@
     <div class="panel review-sub">
       <dl class="reg-dl">
         <dt>Round 1 submitted</dt><dd>{{ (sub.created_at or "")[:10] }}</dd>
-        {% if sub.reviewer_reviewed_at %}
-          <dt>Reviewed by</dt><dd>{{ (students.get(sub.assigned_reviewer_id) or {}).get("name", "—") or "—" }} · {{ sub.reviewer_reviewed_at[:10] }}</dd>
+        {% if sub.r1_reviewed_at %}
+          <dt>Round 1 reviewed by</dt><dd>{{ (students.get(sub.r1_reviewed_by) or {}).get("name", "—") or "—" }} · {{ sub.r1_reviewed_at[:10] }}</dd>
         {% endif %}
-        {% if r2 and r2.reviewed_at %}
-          <dt>Decided</dt><dd>{{ (students.get(r2.reviewed_by) or {}).get("name", "—") or "—" }} · {{ r2.reviewed_at[:10] }}</dd>
+        {% if sub.format_chosen_at %}
+          <dt>Format chosen</dt><dd>{{ ui.type_badge(sub.format) }} · {{ sub.format_chosen_at[:10] }}</dd>
+        {% endif %}
+        {% if sub.content_received_at %}
+          <dt>Round 2 content</dt><dd>Submitted · {{ sub.content_received_at[:10] }}{% if sub.r2_reviewed_at %} · decided {{ sub.r2_reviewed_at[:10] }}{% endif %}</dd>
         {% endif %}
       </dl>
 
-      <h3 class="review-head">Abstract — Round 1</h3>
-      <p class="review-abstract">{{ sub.description }}</p>
+      <h3 class="review-head">Round 1 — abstract</h3>
+      <p class="review-abstract">{{ sub.description_r1 or sub.description }}</p>
 
-      {% if sub.assigned_reviewer_id or sub.reviewer_comment %}
+      {% if sub.r2_status %}
+        <h3 class="review-head">Round 2 — content</h3>
+        {% if sub.format == "poster" %}
+          <p class="review-abstract">{{ sub.description_r2 or "" }}</p>
+        {% elif sub.has_pdf %}
+          <p class="side-note">
+            {{ sub.pdf_name }}{% if sub.pdf_size %} · {{ (sub.pdf_size / 1048576) | round(2) }} MB{% endif %}
+            <a class="btn btn-sm btn-outline" href="/pdf/{{ sub.id }}" target="_blank">Open PDF</a>
+          </p>
+        {% endif %}
+      {% endif %}
+
+      {% if declared_r1 and (sub.r1_reviewer_id or sub.r1_comment) %}
         <div class="sub-review">
           <p class="sub-review-label">
-            Reviewer feedback
-            {% if sub.reviewer_reviewed_at %}
-              <span class="badge badge-selected">Sent · {{ sub.reviewer_reviewed_at[:10] }}</span>
+            Round 1 decision
+            {% if sub.r1_reviewed_at %}
+              <span class="badge badge-selected">Sent · {{ sub.r1_reviewed_at[:10] }}</span>
             {% else %}
               <span class="badge badge-neutral">Not yet</span>
             {% endif %}
           </p>
-          {% if sub.reviewer_comment %}
-            <p class="review-quote">“{{ sub.reviewer_comment }}”</p>
+          {% if sub.r1_comment %}
+            <p class="review-quote">“{{ sub.r1_comment }}”</p>
           {% else %}
             <p class="side-note">No feedback yet.</p>
           {% endif %}
         </div>
-      {% else %}
+      {% elif declared_r1 %}
         <p class="side-note">No reviewer assigned yet.</p>
       {% endif %}
 
-      {% if r2 %}<a class="btn btn-ghost" href="/student/submission/{{ sub.id }}/round2">View Round 2 →</a>{% endif %}
+      {% if sub.r2_comment and declared_r2 %}
+        <div class="sub-review sub-review-final">
+          <p class="sub-review-label">Final decision — {{ ui.status_badge(sub.r2_status) }}</p>
+          <p class="review-quote">“{{ sub.r2_comment }}”</p>
+        </div>
+      {% endif %}
     </div>
 
     <div class="panel form-card review-form">
       <h2 class="panel-title">What happens next</h2>
 
-      {% if sub.status == "pending" %}
-        <p class="side-note">Your work is queued — the theme incharge will assign a reviewer to Round 1. You can still edit it before then.</p>
-      {% elif sub.status == "under_review" %}
-        <p class="side-note">A reviewer is reading your Round 1. Editing is locked; you can address their feedback in Round 2.</p>
-      {% elif sub.status == "feedback_given" and not r2 %}
-        <p class="side-note">The reviewer sent feedback — no decision yet. Address it in Round 2.</p>
-      {% elif r2 and sub.status == "awaiting_decision" %}
-        <p class="side-note">Round 2 is with the theme incharge, who compares both versions and makes the final decision.</p>
-      {% elif sub.status == "selected" %}
-        <p class="side-note">Selected — once the conference team approves your details, payment opens.</p>
-      {% elif sub.status == "not_selected" %}
-        <p class="side-note">After the final comparison, this presentation was not selected.</p>
+      {% if sub.r1_status == "r1_pending" %}
+        <p class="side-note">Your work is queued — the theme incharge will assign a reviewer to Round 1, or review it themselves. You can still edit it before then.</p>
+      {% elif sub.r1_status == "r1_under_review" %}
+        <p class="side-note">A reviewer is reading your Round 1. Editing is locked; the decision (Selected for Round 2 / Not Selected) comes back here once the results are announced.</p>
+      {% elif declared_r1 and sub.r1_status == "r1_selected" and not sub.format %}
+        <p class="side-note">Selected for Round 2! Now choose your presentation format — PPT or Poster.</p>
+      {% elif sub.r2_status == "r2_pending" %}
+        <p class="side-note">Your {{ "PDF" if sub.format == "ppt" else "poster content" }} is queued for Round 2 review. {% if sub.format == "poster" %}You can revise it until the reviewer starts.{% else %}You can replace the PDF until the reviewer starts.{% endif %}</p>
+      {% elif sub.r2_status == "r2_under_review" %}
+        <p class="side-note">A reviewer is reading your Round 2 {{ "PDF" if sub.format == "ppt" else "content" }}. The final decision (Selected / Not Selected) comes back here once the results are announced.</p>
+      {% elif declared_r2 and sub.r2_status == "selected" %}
+        <p class="side-note">Selected — congratulations! Your presentation is confirmed for INFRASURE 2027.</p>
+      {% elif declared_r2 and sub.r2_status == "not_selected" %}
+        <p class="side-note">This presentation was not selected. It cannot be resubmitted.</p>
+      {% elif declared_r1 and sub.r1_status == "r1_not_selected" %}
+        <p class="side-note">This presentation was not selected for Round 2 — it cannot be resubmitted.</p>
+      {% else %}
+        <p class="side-note">The result for this round has not been announced yet — check back soon.</p>
       {% endif %}
 
-      {% if sub.status == "pending" %}
+      {% if sub.r1_status == "r1_pending" and site_state.round1_open %}
         <a class="btn btn-lg btn-block btn-outline" href="/student/edit/{{ sub.id }}">Edit Round 1</a>
-      {% elif sub.status == "feedback_given" and not r2 %}
-        <a class="btn btn-lg btn-block btn-primary" href="/student/submission/{{ sub.id }}/round2/apply">Submit Round 2</a>
-      {% elif r2 %}
-        <a class="btn btn-lg btn-block btn-primary" href="/student/submission/{{ sub.id }}/round2">View Round 2</a>
+      {% elif declared_r1 and site_state.round2_open and sub.r1_status == "r1_selected" and not sub.format %}
+        <a class="btn btn-lg btn-block btn-primary" href="/student/submission/{{ sub.id }}/round2">Choose format →</a>
+      {% elif declared_r1 and site_state.round2_open and sub.r2_status == "r2_pending" and sub.format == "poster" %}
+        <a class="btn btn-lg btn-block btn-primary" href="/student/submission/{{ sub.id }}/round2/content">Edit Round 2 content</a>
+      {% elif declared_r1 and site_state.round2_open and sub.r2_status == "r2_pending" and sub.format == "ppt" %}
+        <a class="btn btn-lg btn-block btn-primary" href="/student/submission/{{ sub.id }}/round2/upload">Replace PDF</a>
       {% endif %}
       <a class="btn btn-ghost btn-lg btn-block" href="/student/dashboard">Back to dashboard</a>
     </div>

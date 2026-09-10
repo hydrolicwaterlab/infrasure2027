@@ -17,15 +17,34 @@
       {{ ui.admin_nav("dashboard") }}
     </div>
 
+    <div class="panel phase-strip">
+      <div class="panel-head">
+        <h2 class="panel-title">Phase status</h2>
+        <a class="btn btn-sm btn-outline" href="/admin/controls">Manage controls</a>
+      </div>
+      <div class="phase-strip-row">
+        <span class="phase-chip {{ 'chip-open' if site_state.registration_open }}">Registration {{ "open" if site_state.registration_open else "closed" }}</span>
+        <span class="phase-chip {{ 'chip-open' if site_state.round1_open }}">Round 1 {{ "open" if site_state.round1_open else "closed" }}</span>
+        <span class="phase-chip {{ 'chip-open' if site_state.round1_results_declared }}">Round 1 results {{ "declared" if site_state.round1_results_declared else "hidden" }}</span>
+        <span class="phase-chip {{ 'chip-open' if site_state.round2_open }}">Round 2 {{ "open" if site_state.round2_open else "closed" }}</span>
+        <span class="phase-chip {{ 'chip-open' if site_state.round2_results_declared }}">Round 2 results {{ "declared" if site_state.round2_results_declared else "hidden" }}</span>
+        <span class="phase-chip {{ 'chip-open' if site_state.payment_open }}">Payment {{ "open" if site_state.payment_open else "closed" }}</span>
+      </div>
+    </div>
+
     <div class="stat-cards">
       <div class="stat-card"><p class="stat-value">{{ stats.students }}</p><p class="stat-label">Students</p></div>
       <div class="stat-card"><p class="stat-value">{{ stats.incharges }}</p><p class="stat-label">Theme incharges</p></div>
       <div class="stat-card"><p class="stat-value">{{ stats.reviewers }}</p><p class="stat-label">Reviewers</p></div>
-      <div class="stat-card"><p class="stat-value">{{ stats.submissions }}</p><p class="stat-label">Submissions (rounds)</p></div>
-      <div class="stat-card"><p class="stat-value stat-good">{{ stats.pending }}</p><p class="stat-label">Round 1 pending review</p></div>
-      <div class="stat-card"><p class="stat-value">{{ stats.feedbacks }}</p><p class="stat-label">Feedback sent</p></div>
-      <div class="stat-card"><p class="stat-value">{{ stats.awaiting }}</p><p class="stat-label">Round 2 awaiting decision</p></div>
-      <div class="stat-card"><p class="stat-value stat-good">{{ stats.selected }}</p><p class="stat-label">Selected</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.submissions }}</p><p class="stat-label">Submissions</p></div>
+      <div class="stat-card"><p class="stat-value stat-good">{{ stats.r1_pending }}</p><p class="stat-label">Round 1 pending review</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.r1_under_review }}</p><p class="stat-label">Round 1 under review</p></div>
+      <div class="stat-card"><p class="stat-value stat-good">{{ stats.r1_selected }}</p><p class="stat-label">Selected for Round 2</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.formats_chosen }}</p><p class="stat-label">Formats chosen</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.r2_pending }}</p><p class="stat-label">Round 2 pending review</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.r2_under_review }}</p><p class="stat-label">Round 2 under review</p></div>
+      <div class="stat-card"><p class="stat-value stat-good">{{ stats.final_selected }}</p><p class="stat-label">Finally selected</p></div>
+      <div class="stat-card"><p class="stat-value">{{ stats.final_not_selected }}</p><p class="stat-label">Finally not selected</p></div>
       <div class="stat-card"><p class="stat-value">{{ stats.registrations }}</p><p class="stat-label">Participant details</p></div>
       <div class="stat-card"><p class="stat-value {{ 'stat-good' if stats.reg_approved }}">{{ stats.reg_approved }}</p><p class="stat-label">Approved attendance</p></div>
       <div class="stat-card"><p class="stat-value">{{ stats.fees_paid }}</p><p class="stat-label">Fees collected</p></div>
@@ -52,7 +71,8 @@
         <div class="panel">
           <div class="panel-head"><h2 class="panel-title">Quick actions</h2></div>
           <div class="quick-actions">
-            <a class="btn btn-primary" href="/admin/submissions">Review submissions</a>
+            <a class="btn btn-primary" href="/admin/controls">Open / close phases</a>
+            <a class="btn btn-outline" href="/admin/submissions">Review submissions</a>
             <a class="btn btn-outline" href="/admin/registrations">Manage registrations</a>
             <a class="btn btn-outline" href="/admin/announcements">Post an announcement</a>
             <a class="btn btn-outline" href="/admin/faqs">Manage FAQs</a>

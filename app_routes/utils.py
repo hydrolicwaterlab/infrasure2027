@@ -18,20 +18,41 @@ FLASH = {
     "incharge_only": ("error", "This page is for theme incharge accounts."),
     "admin_only": ("error", "This page is for site administrators."),
     # submissions
-    "submission_created": ("success", "Round 1 received — it is now pending review."),
+    "r1_created": ("success", "Round 1 received — it is now pending review."),
     "submission_updated": ("success", "Your submission was updated."),
     "submissions_full": ("error", "You have reached the limit of 2 presentations."),
-    "submission_locked": ("error", "This submission has already received feedback — submit Round 2 to make changes."),
+    "submission_locked": ("error", "This submission has already been reviewed — it can no longer be edited."),
     "submission_not_found": ("error", "Submission not found."),
-    "round2_submitted": ("success", "Round 2 submitted — it is with the theme incharge for the final decision."),
-    "round2_already_exists": ("error", "Round 2 already exists for this presentation."),
-    "round2_not_ready": ("error", "Round 2 opens once the reviewer has sent feedback on Round 1."),
+    "round2_not_ready": ("error", "Round 2 opens once the reviewer selects your Round 1."),
+    "format_chosen": ("success", "Format saved — now submit your Round 2 content."),
+    "format_already_chosen": ("error", "You have already chosen a format for this submission."),
+    "bad_format": ("error", "Please choose PPT or Poster."),
     "info_required": ("error", "Please complete your details before applying to present."),
-    # review (feedback + final decision)
-    "review_saved": ("success", "Decision saved — the student can now see the final outcome."),
-    "feedback_sent": ("success", "Feedback sent — the student can now submit Round 2."),
+    # Round 2 content (poster form / ppt PDF)
+    "r2_content_saved": ("success", "Round 2 content saved — it is now pending Round 2 review."),
+    "r2_uploaded": ("success", "PDF uploaded — it is now pending Round 2 review."),
+    "r2_content_updated": ("success", "Round 2 content updated."),
+    "r2_pdf_replaced": ("success", "PDF replaced — the latest version will be reviewed."),
+    "bad_pdf_type": ("error", "Please upload a valid PDF file."),
+    "pdf_too_large": ("error", "That file is too large — please keep it under the size limit."),
+    "need_content": ("error", "The student must submit Round 2 content before a reviewer can be assigned."),
+    "content_locked": ("error", "Round 2 is under review or decided — content can no longer be changed."),
+    # review (Round 1 decision: Selected for Round 2 / Not Selected)
+    "r1_decision_saved": ("success", "Decision saved — the student can see the Round 1 outcome."),
+    "feedback_sent": ("success", "Feedback sent — the student can now choose their format for Round 2."),
     "not_your_theme": ("error", "You can only review submissions in your assigned themes."),
-    "bad_decision": ("error", "Please choose Selected or Not Selected."),
+    "bad_decision": ("error", "Please choose Selected for Round 2 or Not Selected."),
+    # final decision (Round 2: Selected / Not Selected)
+    "final_decision_saved": ("success", "Final decision saved — the student can see the Round 2 outcome."),
+    # admin phase controls
+    "registration_closed": ("error", "Registration is currently closed — please try again later."),
+    "round1_closed": ("error", "Round 1 submissions are closed."),
+    "round1_results_not_declared": ("error", "Round 1 results are not announced yet."),
+    "round2_closed": ("error", "Round 2 submissions are closed."),
+    "round2_results_not_declared": ("error", "Round 2 results are not announced yet."),
+    "payment_closed": ("error", "Payment is currently closed."),
+    "control_not_found": ("error", "That control does not exist."),
+    "control_toggled": ("success", "Phase control updated."),
     # reviewer workflow
     "assigned_reviewer": ("success", "Reviewer assigned — they can now review Round 1."),
     "reviewer_exists_assigned": ("success", "That reviewer already has an account — assigned them instead."),
@@ -42,7 +63,7 @@ FLASH = {
     "reviewer_email_taken": ("error", "That email belongs to a student/incharge/admin account — use a reviewer account or a different email."),
     "not_your_assignment": ("error", "This submission is not assigned to you."),
     "bad_status": ("error", "That action isn't valid in the submission's current state."),
-    "review_submitted": ("success", "Your feedback was sent — the student can now submit Round 2."),
+    "review_submitted": ("success", "Your decision was saved — the student can see the Round 1 outcome."),
     "reviewer_created": ("success", "Reviewer account created."),
     "reviewer_themes_updated": ("success", "Assigned themes updated."),
     "reviewer_removed": ("success", "Reviewer removed — review Round 1 yourself or assign a new reviewer."),
@@ -88,25 +109,27 @@ FLASH = {
 TYPE_LABELS = {"ppt": "PPT", "poster": "Poster"}
 MODE_LABELS = {"in_person": "In person"}
 STATUS_LABELS = {
-    "pending": "Pending review",
-    "under_review": "Under review",
-    "feedback_given": "Feedback sent",
-    "superseded": "Round 1 complete",
-    "awaiting_decision": "Awaiting decision",
-    "selected": "Selected",
-    "not_selected": "Not selected",
+    "r1_pending": "Pending review",
+    "r1_under_review": "Under review",
+    "r1_selected": "Selected for Round 2",
+    "r1_not_selected": "Not selected",
+    "r2_pending": "Round 2 pending review",
+    "r2_under_review": "Round 2 under review",
     "approved": "Approved",
     "rejected": "Rejected",
-    # legacy statuses (kept for safety on old records)
-    "reviewer_done": "Reviewer feedback ready",
-    "revision_requested": "Revision requested",
-    "revised": "Revised",
+    # final decisions (Round 2)
+    "selected": "Selected",
+    "not_selected": "Not selected",
+    # masked results (shown to students until the admin declares them)
+    "r1_awaiting": "Result to be announced",
+    "r2_awaiting": "Result to be announced",
 }
 
 
 def base_ctx(request: Request, **extra) -> dict:
     """Template context with config, current user, and any flash/extra vars."""
-    return {"request": request, "config": SITE_CONFIG,
+    from app_routes.service import site_state
+    return {"request": request, "config": SITE_CONFIG, "site_state": site_state(),
             "current_user": user_from_request(request), **extra}
 
 

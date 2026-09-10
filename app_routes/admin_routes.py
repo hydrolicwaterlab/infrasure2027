@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, Form, Request
 
 from app_routes.schemas import AnnouncementForm, FaqCategoryForm, FaqForm, InchargeForm, PasswordForm, clean_themes, validate
 from app_routes.service import (
+    SITE_FLAG_HINTS,
+    SITE_FLAG_LABELS,
     announcements_list,
     apply_registration_action,
     create_announcement,
@@ -25,6 +27,8 @@ from app_routes.service import (
     scoped_submissions,
     set_incharge_themes,
     set_reviewer_themes,
+    set_site_flag,
+    site_state,
     students_map,
     submission_actions,
     toggle_announcement,
@@ -55,10 +59,15 @@ def _stats() -> dict:
         "incharges": len(incharges),
         "reviewers": len(reviewers),
         "submissions": len(subs),
-        "pending": sum(1 for s in subs if s["status"] == "pending"),
-        "feedbacks": sum(1 for s in subs if s["status"] == "feedback_given"),
-        "awaiting": sum(1 for s in subs if s["status"] == "awaiting_decision"),
-        "selected": sum(1 for s in subs if s["status"] == "selected"),
+        "r1_pending": sum(1 for s in subs if s.get("r1_status") == "r1_pending"),
+        "r1_under_review": sum(1 for s in subs if s.get("r1_status") == "r1_under_review"),
+        "r1_selected": sum(1 for s in subs if s.get("r1_status") == "r1_selected"),
+        "r1_not_selected": sum(1 for s in subs if s.get("r1_status") == "r1_not_selected"),
+        "formats_chosen": sum(1 for s in subs if s.get("format") in ("ppt", "poster")),
+        "r2_pending": sum(1 for s in subs if s.get("r2_status") == "r2_pending"),
+        "r2_under_review": sum(1 for s in subs if s.get("r2_status") == "r2_under_review"),
+        "final_selected": sum(1 for s in subs if s.get("r2_status") == "selected"),
+        "final_not_selected": sum(1 for s in subs if s.get("r2_status") == "not_selected"),
         "registrations": len(regs),
         "reg_pending": sum(1 for r in regs if r["status"] == "pending"),
         "reg_approved": sum(1 for r in regs if r["status"] == "approved"),
@@ -74,8 +83,8 @@ def _stats() -> dict:
     }
 
 
-def _submit_actions(s: dict) -> list:
-    return submission_actions(None, s)
+def _submit_actions(round_no: int):
+    return lambda s: submission_actions(None, s, round_no)
 
 
 @router.get("/dashboard")
@@ -89,6 +98,27 @@ def dashboard(request: Request, user: dict = Depends(ADMIN)):
     )
 
 
+# ---------- phase controls ----------
+
+@router.get("/controls")
+def controls(request: Request, user: dict = Depends(ADMIN)):
+    return render_msg(
+        request,
+        "admin/controls.html",
+        msg=request.query_params.get("msg"),
+        user=user,
+        state=site_state(),
+        labels=SITE_FLAG_LABELS,
+        hints=SITE_FLAG_HINTS,
+    )
+
+
+@router.post("/controls/{flag}/toggle")
+def control_toggle(request: Request, flag: str, user: dict = Depends(ADMIN)):
+    _, err = set_site_flag(flag, user)
+    return flash_response("/admin/controls", err or "control_toggled")
+
+
 # ---------- submissions ----------
 
 @router.get("/submissions")
@@ -98,12 +128,14 @@ def submissions(
     theme: str = "",
     status: str = "",
     type: str = "",
-    round: str = "",
+    round: int = 1,
 ):
+    round_no = 2 if round == 2 else 1
     subs = decorated_subs(
-        filter_submissions(scoped_submissions(user), theme, status, type, round),
+        filter_submissions(scoped_submissions(user), theme, status, type, round_no),
         students_map(),
-        _submit_actions,
+        _submit_actions(round_no),
+        round_no,
     )
     return render_msg(
         request,
@@ -112,7 +144,7 @@ def submissions(
         user=user,
         subs=subs,
         themes=SITE_CONFIG["themes"],
-        filters={"theme": theme, "status": status, "type": type, "round": round},
+        filters={"theme": theme, "status": status, "type": type, "round": round_no},
     )
 
 

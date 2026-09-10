@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Upload Round 2 PDF — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Student portal · Round 2 · PPT</p>
+    <h1 class="display display-on-dark">Upload your Round 2 work.</h1>
+    <p class="page-head-sub">Submit a single PDF of your PPT presentation or extended abstract. It is shown to the reviewer in the browser.</p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container container-narrow">
+    {% include "_form_errors.html" %}
+
+    <div class="panel form-card">
+      <h2 class="panel-title">Feedback on your Round 1</h2>
+      <dl class="reg-dl">
+        <dt>Your presentation</dt><dd>{{ ui.type_badge(sub.format) }} · {{ sub.theme }} · {{ ui.status_badge(sub.r1_status) }}</dd>
+        {% if sub.r1_reviewer_id %}
+          <dt>Reviewed by</dt><dd>{{ (students.get(sub.r1_reviewer_id) or {}).get("name", "—") or "—" }}{% if sub.r1_reviewed_at %} · {{ sub.r1_reviewed_at[:10] }}{% endif %}</dd>
+        {% endif %}
+      </dl>
+      {% if sub.r1_comment %}
+        <div class="sub-review">
+          <p class="review-quote">“{{ sub.r1_comment }}”</p>
+        </div>
+      {% else %}
+        <p class="side-note">No comment left.</p>
+      {% endif %}
+    </div>
+
+    {% if sub.has_pdf %}
+      <div class="panel form-card">
+        <h2 class="panel-title">Current PDF</h2>
+        <dl class="reg-dl">
+          <dt>File</dt><dd>{{ sub.pdf_name }}</dd>
+          {% if sub.pdf_size %}<dt>Size</dt><dd>{{ (sub.pdf_size / 1048576) | round(2) }} MB</dd>{% endif %}
+          <dt>Uploaded</dt><dd>{{ sub.pdf_uploaded_at[:10] }}</dd>
+        </dl>
+        <a class="btn btn-sm btn-outline" href="/pdf/{{ sub.id }}" target="_blank">Open PDF</a>
+      </div>
+    {% endif %}
+
+    <form method="post" class="panel form-card" action="/student/submission/{{ sub.id }}/round2/upload"
+          enctype="multipart/form-data" novalidate>
+      <fieldset class="form-block">
+        <legend class="form-legend">Upload PDF</legend>
+        <div class="field">
+          <label for="file">PDF file (max {{ config.max_pdf_mb }} MB)</label>
+          <input type="file" id="file" name="file" accept="application/pdf" required />
+          <p class="field-hint">Only PDF files are accepted. You can replace it while Round 2 is still pending review.</p>
+        </div>
+      </fieldset>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-lg" type="submit">{{ "Replace PDF" if sub.has_pdf else "Upload PDF" }}</button>
+        <a class="btn btn-ghost btn-lg" href="/student/submission/{{ sub.id }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

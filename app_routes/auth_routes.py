@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
-from app_routes.service import now
+from app_routes.service import now, site_flag
 from app_routes.schemas import LoginForm, RegisterForm, validate
 from app_routes.utils import flash_response, flash_text, render
 from auth import (
@@ -25,15 +25,17 @@ def _redirect_home_for(user: dict) -> RedirectResponse:
     return RedirectResponse(home_for_role(user), status_code=303)
 
 
-@router.get("/register12345")
+@router.get("/registerinfrasure")
 @limiter.limit("20/minute")
 def register_form(request: Request):
     if user_from_request(request):
         return _redirect_home_for(user_from_request(request))
+    if not site_flag("registration_open"):
+        return flash_response("/", "registration_closed")
     return render(request, "register.html", **flash_text(request.query_params.get("msg")))
 
 
-@router.post("/register12345")
+@router.post("/registerinfrasure")
 @limiter.limit("20/minute")
 def register_submit(
     request: Request,
@@ -45,6 +47,8 @@ def register_submit(
 ):
     if user_from_request(request):
         return _redirect_home_for(user_from_request(request))
+    if not site_flag("registration_open"):
+        return flash_response("/", "registration_closed")
     data = {"name": name, "email": email, "password": password, "confirm": confirm, "agree": agree}
     form, errors = validate(RegisterForm, data)
     if not errors and one("users", email=form.email):
@@ -65,10 +69,10 @@ def register_submit(
         },
         prefix="u",
     )
-    return flash_response("/login12345", "registered")
+    return flash_response("/logininfrasure", "registered")
 
 
-@router.get("/login12345")
+@router.get("/logininfrasure")
 @limiter.limit("20/minute")
 def login_form(request: Request):
     user = user_from_request(request)
@@ -77,7 +81,7 @@ def login_form(request: Request):
     return render(request, "login.html", **flash_text(request.query_params.get("msg")))
 
 
-@router.post("/login12345")
+@router.post("/logininfrasure")
 @limiter.limit("20/minute")
 def login_submit(request: Request, email: str = Form(""), password: str = Form("")):
     data = {"email": email, "password": password}

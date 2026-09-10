@@ -4,8 +4,8 @@ import re
 from pydantic import BaseModel, field_validator, model_validator
 
 MAX_SUBMISSIONS = 2
-MAX_ROUNDS = 2
-SUBMISSION_TYPES = ("ppt", "poster")
+FORMATS = ("ppt", "poster")
+ROUND1_DECISIONS = ("r1_selected", "r1_not_selected")
 DESIGNATIONS = ("UG", "PG", "PhD Scholar", "Faculty", "Industry", "Other")
 PARTICIPANT_CATEGORY = ("Student", "Academic", "Industry")
 STUDENT_LEVEL = ("UG", "PG", "PhD")
@@ -184,17 +184,11 @@ def clean_description(v: str) -> str:
 
 
 class SubmissionForm(BaseModel):
-    submission_type: str = ""
+    """Round 1 — title + abstract only. The format (PPT/Poster) is chosen in Round 2."""
+
     theme: str = ""
     title: str = ""
     description: str = ""
-
-    @field_validator("submission_type")
-    @classmethod
-    def _type(cls, v: str) -> str:
-        if v not in SUBMISSION_TYPES:
-            raise ValueError("Please choose PPT or Poster.")
-        return v
 
     @field_validator("theme")
     @classmethod
@@ -214,8 +208,46 @@ class SubmissionForm(BaseModel):
         return clean_description(v)
 
 
+class FormatChoiceForm(BaseModel):
+    """Round 2 starts with the student choosing PPT or Poster — per submission."""
+
+    format: str = ""
+
+    @field_validator("format")
+    @classmethod
+    def _format(cls, v: str) -> str:
+        if v not in FORMATS:
+            raise ValueError("Please choose PPT or Poster.")
+        return v
+
+
+class RoundOneDecisionForm(BaseModel):
+    """Round 1 decision — Selected for Round 2, or Not Selected (dead end).
+
+    Recorded by the assigned reviewer (when under review) or by the theme incharge
+    directly. Always accompanies feedback shown to the student.
+    """
+
+    decision: str = ""
+    comment: str = ""
+
+    @field_validator("decision")
+    @classmethod
+    def _decision(cls, v: str) -> str:
+        if v not in ROUND1_DECISIONS:
+            raise ValueError("Please choose Selected for Round 2 or Not Selected.")
+        return v
+
+    @field_validator("comment")
+    @classmethod
+    def _comment(cls, v: str) -> str:
+        if len(v.strip()) < 10:
+            raise ValueError("Please leave at least a short note with your feedback.")
+        return v.strip()[:1000]
+
+
 class RoundTwoForm(BaseModel):
-    """Round 2 revision — title + abstract only. Format and theme stay fixed."""
+    """Round 2 (Poster) — revised title + abstract addressing the Round 1 feedback."""
 
     title: str = ""
     description: str = ""
@@ -231,7 +263,13 @@ class RoundTwoForm(BaseModel):
         return clean_description(v)
 
 
-class ReviewForm(BaseModel):
+class RoundTwoDecisionForm(BaseModel):
+    """Final decision — Selected, or Not Selected (dead end).
+
+    Recorded by the assigned Round 2 reviewer (when under review) or by the theme
+    incharge directly. Always accompanies feedback shown to the student.
+    """
+
     decision: str = ""
     comment: str = ""
 
@@ -245,23 +283,8 @@ class ReviewForm(BaseModel):
     @field_validator("comment")
     @classmethod
     def _comment(cls, v: str) -> str:
-        return v.strip()[:1000]
-
-
-class RoundOneReviewForm(BaseModel):
-    """Round 1 feedback from a reviewer or a theme incharge — questions / requested changes only.
-
-    No recommendation and no decision in round 1; the final decision happens
-    on the round 2 submission in the incharge panel.
-    """
-
-    comment: str = ""
-
-    @field_validator("comment")
-    @classmethod
-    def _comment(cls, v: str) -> str:
         if len(v.strip()) < 10:
-            raise ValueError("Please leave at least a short note with your questions / requested changes.")
+            raise ValueError("Please leave at least a short note with your feedback.")
         return v.strip()[:1000]
 
 

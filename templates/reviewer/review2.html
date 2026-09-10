@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui %}
-{% block title %}Review submission — {{ config.name }}{% endblock %}
+{% block title %}Round 2 review — {{ config.name }}{% endblock %}
 {% block content %}
 
 <section class="page-head page-head-compact">
   <div class="container">
-    <p class="eyebrow eyebrow-on-dark">Reviewer · Round 1</p>
+    <p class="eyebrow eyebrow-on-dark">Reviewer · Round 2</p>
     <h1 class="display display-on-dark">{{ sub.title }}</h1>
-    <p class="page-head-sub">Decide Selected for Round 2 or Not Selected. Your feedback is shown to the student.</p>
+    <p class="page-head-sub">Decide the final outcome — Selected, or Not Selected. Your feedback is shown to the student.</p>
   </div>
 </section>
 
@@ -17,7 +17,7 @@
       <div class="review-meta">
         {{ ui.type_badge(sub.format) }}
         <span class="badge badge-type">{{ sub.theme }} · {{ ui.theme_name(sub.theme, config.themes) }}</span>
-        {{ ui.round_badge(1) }}
+        {{ ui.round_badge(1) }}{{ ui.round_badge(2) }}
       </div>
       <h2 class="review-head">Submission</h2>
       <dl class="reg-dl">
@@ -25,18 +25,38 @@
         <dt>Email</dt><dd>{{ (students.get(sub.user_id) or {}).get("email", "—") or "—" }}</dd>
         <dt>Submitted</dt><dd>{{ (sub.created_at or "")[:10] }}</dd>
       </dl>
-      <h3 class="review-head">Abstract</h3>
-      <p class="review-abstract">{{ sub.description }}</p>
+
+      <h3 class="review-head">Round 1 — abstract</h3>
+      <p class="review-abstract">{{ sub.description_r1 or sub.description }}</p>
+
+      {% if sub.r1_comment %}
+        <div class="sub-review">
+          <p class="sub-review-label">Round 1 decision — {{ ui.status_badge(sub.r1_status) }}</p>
+          <p class="review-quote">“{{ sub.r1_comment }}”</p>
+        </div>
+      {% endif %}
+
+      <h3 class="review-head">Round 2 — content</h3>
+      {% if sub.format == "poster" %}
+        <p class="review-abstract">{{ sub.description_r2 or "" }}</p>
+      {% elif sub.has_pdf %}
+        <div class="pdf-viewer-wrap">
+          <p class="sub-review-label">In-browser preview — {{ sub.pdf_name }}{% if sub.pdf_size %} · {{ (sub.pdf_size / 1048576) | round(2) }} MB{% endif %}</p>
+          <iframe class="pdf-viewer" src="/pdf/{{ sub.id }}" title="{{ sub.pdf_name }}"></iframe>
+        </div>
+      {% else %}
+        <p class="side-note">Round 2 content not submitted yet.</p>
+      {% endif %}
     </div>
 
     <div class="panel form-card review-form">
       {% include "_form_errors.html" %}
-      <form method="post" action="/reviewer/review/{{ sub.id }}" novalidate>
+      <form method="post" action="/reviewer/review/{{ sub.id }}/round2" novalidate>
         <fieldset class="form-block">
           <legend class="form-legend">Your decision</legend>
           <div class="form-actions form-actions-stack">
-            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="r1_selected">Selected for Round 2</button>
-            <button class="btn btn-danger btn-lg btn-block" type="submit" name="decision" value="r1_not_selected"
+            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="selected">Selected</button>
+            <button class="btn btn-danger btn-lg btn-block" type="submit" name="decision" value="not_selected"
                     onclick="return confirm('Not selected ends this submission. Continue?')">Not selected</button>
           </div>
         </fieldset>

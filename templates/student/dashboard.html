@@ -2,12 +2,16 @@
 {% import "_macros.html" as ui %}
 {% block title %}My dashboard — {{ config.name }}{% endblock %}
 {% block content %}
-{% set ns = namespace(selected=0) %}
+{% set ns = namespace(selected=0, final=0) %}
 {% for t in threads %}
-  {% set st = (t.round2.status if t.round2 else t.status) %}
-  {% if st == "selected" %}{% set ns.selected = ns.selected + 1 %}{% endif %}
+  {% if t.r1_status == "r1_selected" %}{% set ns.selected = ns.selected + 1 %}{% endif %}
+  {% if t.r2_status == "selected" %}{% set ns.final = ns.final + 1 %}{% endif %}
 {% endfor %}
 {% set selected_count = ns.selected %}
+{% set final_count = ns.final %}
+{% set declared_r1 = site_state.round1_results_declared %}
+{% set declared_r2 = site_state.round2_results_declared %}
+{% set pay_open = site_state.payment_open %}
 
 <section class="page-head">
   <div class="container dash-head">
@@ -19,12 +23,14 @@
     <div class="page-head-actions">
       {% if not info_done %}
         <a class="btn btn-accent" href="/student/info">Complete your details</a>
-      {% elif can_apply %}
+      {% elif site_state.round1_open and can_apply %}
         <a class="btn btn-accent" href="/student/apply">＋ Submit Round 1</a>
+      {% elif can_apply %}
+        <span class="btn btn-accent btn-disabled" aria-disabled="true" title="Round 1 submissions are closed">Round 1 closed</span>
       {% else %}
         <span class="btn btn-accent btn-disabled" aria-disabled="true">Limit reached — 2/2 presentations</span>
       {% endif %}
-      {% if selected_count %}
+      {% if declared_r2 and pay_open and has_selected %}
         {% if reg %}
           {% if reg.status == "approved" %}
             <a class="btn btn-light" href="/student/payment">{{ "View payment" if reg.fee_paid else "Proceed to payment" }}</a>
@@ -35,20 +41,22 @@
           <a class="btn btn-light" href="/student/info">Complete your details</a>
         {% endif %}
       {% else %}
-        <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment opens once a presentation is selected">Payment locked</span>
+        {% if has_selected and not declared_r2 %}
+          <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment opens once the final results are announced">Payment locked</span>
+        {% elif has_selected and not pay_open %}
+          <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment is currently closed">Payment locked</span>
+        {% else %}
+          <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment opens once a presentation is selected">Payment locked</span>
+        {% endif %}
       {% endif %}
     </div>
   </div>
 </section>
 
-{% set awaiting = 0 %}
 {% set ns2 = namespace(awaiting=0, live=0) %}
 {% for t in threads %}
-  {% set st = (t.round2.status if t.round2 else t.status) %}
-  {% if st not in ("selected", "not_selected") %}
-    {% if st != "feedback_given" %}
-      {% set ns2.awaiting = ns2.awaiting + 1 %}
-    {% endif %}
+  {% if t.r1_status not in ("r1_selected", "r1_not_selected") %}
+    {% set ns2.awaiting = ns2.awaiting + 1 %}
   {% endif %}
 {% endfor %}
 
@@ -64,8 +72,12 @@
         <p class="stat-label">Awaiting action</p>
       </div>
       <div class="stat-card">
-        <p class="stat-value{% if selected_count %} stat-good{% endif %}">{{ selected_count }}</p>
-        <p class="stat-label">Selected</p>
+        <p class="stat-value{% if selected_count %} stat-good{% endif %}">{{ selected_count if declared_r1 else "—" }}</p>
+        <p class="stat-label">Selected for Round 2</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value{% if final_count %} stat-good{% endif %}">{{ final_count if declared_r2 else "—" }}</p>
+        <p class="stat-label">Finally selected</p>
       </div>
       <div class="stat-card">
         <p class="stat-value">
@@ -84,54 +96,56 @@
         <div class="panel">
           <div class="panel-head">
             <h2 class="panel-title">My presentations</h2>
-            <p class="panel-sub">Each presentation has two rounds — the original submission and your version after the reviewer's feedback.</p>
+            <p class="panel-sub">Round 1 is your title and abstract. If selected, you choose your presentation format (PPT or Poster) for Round 2.</p>
           </div>
 
           {% if threads %}
             {% for t in threads %}
-              {% set st = (t.round2.status if t.round2 else t.status) %}
               <article class="sub-card">
                 <div class="sub-top">
-                  {{ ui.type_badge(t.submission_type) }}
-                  {% if t.round2 %}
-                    {{ ui.round_badge(1) }}{{ ui.round_badge(2) }}
-                  {% else %}
-                    {{ ui.round_badge(1) }}
-                  {% endif %}
+                  {{ ui.type_badge(t.format) }}
+                  {{ ui.round_badge(1) }}{% if t.r2_status %}{{ ui.round_badge(2) }}{% endif %}
                   <span class="sub-theme">{{ t.theme }} · {{ ui.theme_name(t.theme, config.themes) }}</span>
-                  <span class="badge badge-right">{{ ui.status_badge(st) }}</span>
+                  <span class="badge badge-right">
+                    {% if t.r2_status %}
+                      {% if t.r2_status in ("selected", "not_selected") and not declared_r2 %}{{ ui.status_badge("r2_awaiting") }}{% else %}{{ ui.status_badge(t.r2_status) }}{% endif %}
+                    {% elif t.r1_status in ("r1_selected", "r1_not_selected") and not declared_r1 %}{{ ui.status_badge("r1_awaiting") }}{% else %}{{ ui.status_badge(t.r1_status) }}{% endif %}
+                  </span>
                 </div>
                 <h3 class="sub-title"><a class="sub-title-link" href="/student/submission/{{ t.id }}">{{ t.title }}</a></h3>
-                <p class="sub-desc">{{ (t.round2.description if t.round2 else t.description) }}</p>
+                <p class="sub-desc">{{ t.description }}</p>
 
-                {% if t.status == "feedback_given" %}
+                {% if t.r2_comment and declared_r2 %}
                   <div class="sub-review">
-                    <p class="sub-review-label">Round 1 feedback</p>
-                    <p>“{{ t.reviewer_comment }}”</p>
+                    <p class="sub-review-label">Final decision — {{ ui.status_badge(t.r2_status) }}</p>
+                    <p>“{{ t.r2_comment }}”</p>
                   </div>
-                {% endif %}
-                {% if t.round2 and t.round2.review_comment %}
-                  <div class="sub-review sub-review-final">
-                    <p class="sub-review-label">Final decision — {{ ui.status_badge(t.round2.status) }}</p>
-                    <p>“{{ t.round2.review_comment }}”</p>
+                {% elif declared_r1 and t.r1_status in ("r1_selected", "r1_not_selected") and t.r1_comment %}
+                  <div class="sub-review">
+                    <p class="sub-review-label">Round 1 decision — {{ ui.status_badge(t.r1_status) }}</p>
+                    <p>“{{ t.r1_comment }}”</p>
                   </div>
                 {% endif %}
 
                 <div class="sub-foot">
-                  <span>Round 1 submitted {{ t.created_at[:10] }}{% if t.round2 %} · Round 2 submitted {{ t.round2.created_at[:10] }}{% endif %}</span>
+                  <span>Round 1 submitted {{ t.created_at[:10] }}{% if t.format_chosen_at %} · Format chosen {{ t.format_chosen_at[:10] }}{% endif %}</span>
                   <a class="btn btn-sm btn-ghost" href="/student/submission/{{ t.id }}">View</a>
-                  {% if t.status == "pending" %}
+                  {% if t.r1_status == "r1_pending" and site_state.round1_open %}
                     <a class="btn btn-sm btn-outline" href="/student/edit/{{ t.id }}">Edit Round 1</a>
-                  {% elif t.status == "feedback_given" and not t.round2 %}
-                    <a class="btn btn-sm btn-primary" href="/student/submission/{{ t.id }}/round2/apply">Submit Round 2</a>
-                  {% elif t.round2 %}
-                    <a class="btn btn-sm btn-ghost" href="/student/submission/{{ t.id }}/round2">View Round 2</a>
+                  {% elif declared_r1 and site_state.round2_open and t.r1_status == "r1_selected" and not t.format %}
+                    <a class="btn btn-sm btn-primary" href="/student/submission/{{ t.id }}/round2">Choose format</a>
+                  {% elif declared_r1 and site_state.round2_open and t.r2_status == "r2_pending" and t.format == "poster" %}
+                    <a class="btn btn-sm btn-primary" href="/student/submission/{{ t.id }}/round2/content">Edit Round 2 content</a>
+                  {% elif declared_r1 and site_state.round2_open and t.r2_status == "r2_pending" and t.format == "ppt" %}
+                    <a class="btn btn-sm btn-primary" href="/student/submission/{{ t.id }}/round2/upload">Replace PDF</a>
+                  {% elif t.format %}
+                    <span class="btn btn-sm btn-primary btn-disabled" aria-disabled="true">Format: {{ "PPT" if t.format == "ppt" else "Poster" }}</span>
                   {% endif %}
                 </div>
               </article>
             {% endfor %}
           {% else %}
-            {{ ui.empty_state("No presentations yet", "Present your research as a PPT or a Poster under any of the nine themes. First complete your details, then submit Round 1.", "/student/info" if not info_done else "/student/apply", "Complete your details" if not info_done else "Submit Round 1") }}
+            {{ ui.empty_state("No presentations yet", "Present your research under any of the nine themes. First complete your details, then submit Round 1.", "/student/info" if not info_done else "/student/apply", "Complete your details" if not info_done else "Submit Round 1") }}
           {% endif %}
         </div>
       </div>
@@ -196,11 +210,12 @@
             <h2 class="panel-title">How the two rounds work</h2>
           </div>
           <ul class="rules-list">
-            <li>Submit Round 1 — PPT or Poster under any of the nine themes.</li>
-            <li>A reviewer gives feedback, asks questions, or requests changes. No selection yet.</li>
-            <li>Submit Round 2 addressing the feedback — your Round 1 stays saved.</li>
-            <li>The theme incharge compares both and decides Selected / Not Selected.</li>
-            <li>If selected, pay once the conference team approves your details.</li>
+            <li>Submit Round 1 — just a title and abstract under any of the nine themes.</li>
+            <li>The theme incharge routes it to a reviewer, or reviews it themselves.</li>
+            <li>Round 1 is decided: Selected for Round 2, or Not Selected.</li>
+            <li>If selected, you choose your format — PPT or Poster — for each submission.</li>
+            <li>Round 2: Poster teams save a revised title and abstract; PPT teams upload a PDF.</li>
+            <li>A final decision — Selected or Not Selected — ends the process for that submission.</li>
           </ul>
         </div>
       </div>
