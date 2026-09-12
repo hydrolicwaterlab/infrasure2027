@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}{{ sub.title }} — Round {{ sub.round }} — {{ config.name }}{% endblock %}
 {% block content %}
 {% set declared_r1 = site_state.round1_results_declared %}

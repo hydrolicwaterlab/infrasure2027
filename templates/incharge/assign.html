@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Assign reviewer — {{ config.name }}{% endblock %}
 {% block content %}
 
@@ -24,6 +24,7 @@
       {{ ui.submission_detail(sub, students, themes) }}
 
       <form method="post" action="/incharge/assign/{{ sub.id }}{% if round == 2 %}/round2{% endif %}" novalidate>
+        {{ ui.csrf_field() }}
         <fieldset class="form-block">
           <legend class="form-legend">Choose an existing reviewer</legend>
           {% if reviewers %}

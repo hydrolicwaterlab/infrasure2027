@@ -21,6 +21,7 @@ from app_routes.service import (
     faqs_list,
     filter_submissions,
     find_user,
+    delete_user_and_data,
     rename_category,
     reset_user_password,
     reviewers_list,
@@ -39,6 +40,7 @@ from app_routes.service import (
 from app_routes.utils import flash_response, render_msg
 from auth import require_role
 from db import load, one
+from otp import send_credentials_email
 from site_config import SITE_CONFIG
 
 router = APIRouter(prefix="/admin")
@@ -119,6 +121,12 @@ def control_toggle(request: Request, flag: str, user: dict = Depends(ADMIN)):
     return flash_response("/admin/controls", err or "control_toggled")
 
 
+# ---------- helpers ----------
+
+def _matches_email(email: str, q: str) -> bool:
+    return q.strip().lower() in (email or "").lower()
+
+
 # ---------- submissions ----------
 
 @router.get("/submissions")
@@ -129,10 +137,18 @@ def submissions(
     status: str = "",
     type: str = "",
     round: int = 1,
+    q: str = "",
 ):
     round_no = 2 if round == 2 else 1
+    # base scoped + theme/status/type filter
+    subs = filter_submissions(scoped_submissions(user), theme, status, type, round_no)
+    # gmail / email search — resolve owner email via students_map
+    if q and q.strip():
+        q_clean = q.strip().lower()
+        smap = students_map()
+        subs = [s for s in subs if q_clean in (smap.get(s.get("user_id"), {}).get("email") or "").lower()]
     subs = decorated_subs(
-        filter_submissions(scoped_submissions(user), theme, status, type, round_no),
+        subs,
         students_map(),
         _submit_actions(round_no),
         round_no,
@@ -144,16 +160,20 @@ def submissions(
         user=user,
         subs=subs,
         themes=SITE_CONFIG["themes"],
-        filters={"theme": theme, "status": status, "type": type, "round": round_no},
+        filters={"theme": theme, "status": status, "type": type, "round": round_no, "q": q},
+        q=q,
     )
 
 
 # ---------- registrations ----------
 
 @router.get("/registrations")
-def registrations(request: Request, user: dict = Depends(ADMIN)):
+def registrations(request: Request, user: dict = Depends(ADMIN), q: str = ""):
     regs = sorted(load("registrations"), key=lambda r: r.get("created_at", ""), reverse=True)
-    return render_msg(request, "admin/registrations.html", user=user, regs=regs)
+    if q and q.strip():
+        q_clean = q.strip().lower()
+        regs = [r for r in regs if q_clean in (r.get("email") or "").lower() or q_clean in (r.get("institute_email") or "").lower() or q_clean in (r.get("company_email") or "").lower()]
+    return render_msg(request, "admin/registrations.html", user=user, regs=regs, q=q)
 
 
 @router.post("/registrations/{rid}/set")
@@ -167,12 +187,18 @@ def registration_set(request: Request, rid: str, user: dict = Depends(ADMIN), ac
 # ---------- users ----------
 
 @router.get("/users")
-def users(request: Request, user: dict = Depends(ADMIN)):
-    return _users_page(request, msg=request.query_params.get("msg"))
+def users(request: Request, user: dict = Depends(ADMIN), q: str = ""):
+    return _users_page(request, msg=request.query_params.get("msg"), q=q)
 
 
-def _users_page(request: Request, msg=None, errors=None, active_reset=None):
+def _users_page(request: Request, msg=None, errors=None, active_reset=None, q: str = ""):
+    # allow q from query param or explicitly passed
+    if not q:
+        q = request.query_params.get("q", "")
     people = sorted(load("users"), key=lambda u: u.get("created_at", ""))
+    if q and q.strip():
+        q_clean = q.strip().lower()
+        people = [u for u in people if q_clean in (u.get("email") or "").lower() or q_clean in (u.get("name") or "").lower()]
     return render_msg(
         request,
         "admin/users.html",
@@ -180,6 +206,7 @@ def _users_page(request: Request, msg=None, errors=None, active_reset=None):
         people=people,
         errors=errors,
         active_reset=active_reset,
+        q=q,
     )
 
 
@@ -203,6 +230,12 @@ def user_password(
     if err:
         return flash_response("/admin/users", err)
     return flash_response("/admin/users", "password_reset")
+
+
+@router.post("/users/{uid}/delete")
+def user_delete(request: Request, uid: str, user: dict = Depends(ADMIN)):
+    _, err = delete_user_and_data(uid, user)
+    return flash_response("/admin/users", err or "user_deleted")
 
 
 # ---------- incharges ----------
@@ -237,10 +270,11 @@ def incharge_create(
     data = {"name": name, "email": email, "password": password, "themes": themes}
     form, errors = validate(InchargeForm, data)
     if not errors and one("users", email=form.email):
-        errors = ["An account with this email already exists."]
+        errors = ["This email is already in use."]
     if errors:
         return _incharges_page(request, values=data, errors=errors)
     create_incharge(form.name, form.email, form.password, form.themes)
+    send_credentials_email(form.name, form.email, form.password, "Theme Incharge")
     return flash_response("/admin/incharges", "incharge_created")
 
 
@@ -264,8 +298,13 @@ def incharge_themes(
 
 # ---------- reviewers ----------
 
-def _reviewers_page(request: Request, msg=None, values=None, errors=None):
+def _reviewers_page(request: Request, msg=None, values=None, errors=None, q: str = ""):
+    if not q:
+        q = request.query_params.get("q", "")
     reviewers = reviewers_list()
+    if q and q.strip():
+        q_clean = q.strip().lower()
+        reviewers = [r for r in reviewers if q_clean in (r.get("email") or "").lower() or q_clean in (r.get("name") or "").lower()]
     return render_msg(
         request,
         "admin/reviewers.html",
@@ -274,12 +313,13 @@ def _reviewers_page(request: Request, msg=None, values=None, errors=None):
         themes=SITE_CONFIG["themes"],
         values=values or {},
         errors=errors,
+        q=q,
     )
 
 
 @router.get("/reviewers")
-def reviewers(request: Request, user: dict = Depends(ADMIN)):
-    return _reviewers_page(request, msg=request.query_params.get("msg"))
+def reviewers(request: Request, user: dict = Depends(ADMIN), q: str = ""):
+    return _reviewers_page(request, msg=request.query_params.get("msg"), q=q)
 
 
 @router.post("/reviewers/create")
@@ -294,10 +334,11 @@ def reviewer_create(
     data = {"name": name, "email": email, "password": password, "themes": themes}
     form, errors = validate(InchargeForm, data)
     if not errors and one("users", email=form.email):
-        errors = ["An account with this email already exists."]
+        errors = ["This email is already in use."]
     if errors:
         return _reviewers_page(request, values=data, errors=errors)
     create_reviewer(form.name, form.email, form.password, form.themes, created_by=user["id"])
+    send_credentials_email(form.name, form.email, form.password, "Reviewer")
     return flash_response("/admin/reviewers", "reviewer_created")
 
 

@@ -10,24 +10,55 @@ source .venv/bin/activate             # activate it (Windows: .venv\Scripts\acti
 pip install -r requirements.txt       # install dependencies
 ```
 
-## 2. Existing admin accounts
+## 2. Admin accounts
 
-The two master admin accounts live directly in `data/users.json` (no seeder needed):
+The two master admin accounts live directly in `data/users.json` (no seeder needed).
 
-| Account       | Email                            | Password |
-|---------------|----------------------------------|----------|
-| Master admin  | admin1@infrasure.in             | admin1   |
-| Master admin  | admin2@infrasure.in             | admin2   |
+> **Security note:** never commit passwords to this file (or anywhere in git).
+> Admin passwords are rotated to strong random values; store them in a password
+> manager or `.env` (gitignored), never in `run.md`. If you need to reset one,
+> run:
+
+```bash
+.venv/bin/python3 -c "
+import json
+from auth import hash_password
+import secrets, string
+with open('data/users.json') as f: users = json.load(f)
+pw = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
+for u in users:
+    if u.get('email') == 'admin1@infrasure.in':
+        u['password_hash'] = hash_password(pw)
+        u['failed_logins'] = 0; u['locked_until'] = 0
+        print('admin1@infrasure.in ->', pw)
+with open('data/users.json','w') as f: json.dump(users, f, indent=2, ensure_ascii=False)
+"
+```
 
 Use the admin panel to create all other accounts — students register themselves,
 theme incharges and reviewers are created by the admin (or reviewers by incharges).
 
 ## 3. Run the server
 
+> **Security requirement:** uvicorn must run with proxy-header trust **disabled**
+> (`--no-proxy-headers`) unless this app is genuinely behind a trusted reverse
+> proxy. Uvicorn's default (`proxy_headers=True`,
+> `forwarded_allow_ips=127.0.0.1`) lets any local client spoof
+> `X-Forwarded-For`, which bypasses every rate limit (login brute-force, OTP
+> guessing, email bombing). `--no-proxy-headers` makes the rate limiter key on
+> the real TCP peer address.
+
 ```bash
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8000 --no-proxy-headers
 # or without activate:
-.venv/bin/uvicorn main:app --reload --port 8000
+.venv/bin/uvicorn main:app --reload --port 8000 --no-proxy-headers
+```
+
+If you deploy behind nginx/Caddy/etc., keep `--proxy-headers` but restrict trust
+to the proxy's own IP only:
+
+```bash
+uvicorn main:app --port 8000 --proxy-headers --forwarded-allow-ips <PROXY_IP>
 ```
 
 Open http://127.0.0.1:8000

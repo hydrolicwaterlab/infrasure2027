@@ -1,5 +1,9 @@
 {# ---- Shared UI macros (incharge / admin / student) ---- #}
 
+{% macro csrf_field() -%}
+  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+{%- endmacro %}
+
 {% macro theme_name(label, themes) -%}
   {%- set ns = namespace(name=label) -%}
   {%- for t in themes if t.label == label and t.name -%}
@@ -61,7 +65,7 @@
   </div>
 {%- endmacro %}
 
-{% macro filter_form(base_url, themes, selected_theme="", selected_status="", selected_type="", selected_round=1) -%}
+{% macro filter_form(base_url, themes, selected_theme="", selected_status="", selected_type="", selected_round=1, selected_q="") -%}
   <form method="get" action="{{ base_url }}" class="filter-bar">
     <label class="field f-inline">
       <span>Round</span>
@@ -106,8 +110,23 @@
         {% endfor %}
       </select>
     </label>
+    <label class="field f-inline">
+      <span>Search by gmail</span>
+      <input type="search" name="q" value="{{ selected_q or '' }}" placeholder="Search by gmail…" style="min-width:210px;" />
+    </label>
     <button class="btn btn-primary btn-sm" type="submit">Filter</button>
     <a class="btn btn-ghost btn-sm" href="{{ base_url }}">Clear</a>
+  </form>
+{%- endmacro %}
+
+{% macro search_bar(base_url, q="", placeholder="Search by gmail…") -%}
+  <form method="get" action="{{ base_url }}" class="filter-bar">
+    <label class="field f-inline" style="flex:1;">
+      <span>Search by gmail</span>
+      <input type="search" name="q" value="{{ q or '' }}" placeholder="{{ placeholder }}" style="min-width:260px; flex:1;" />
+    </label>
+    <button class="btn btn-primary btn-sm" type="submit">Search</button>
+    {% if q %}<a class="btn btn-ghost btn-sm" href="{{ base_url }}">Clear</a>{% endif %}
   </form>
 {%- endmacro %}
 

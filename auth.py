@@ -1,5 +1,6 @@
 """Auth helpers: hashing, sessions, role guards."""
 import hashlib
+import os
 import secrets
 import time
 
@@ -12,6 +13,33 @@ ROLES = ("student", "theme_incharge", "reviewer", "master_admin")
 _sessions = {}  # token -> {"user_id", "role", "expires"}
 
 SESSION_TTL = 6 * 60 * 60  # 6 hours
+
+# Per-account login lockout (persisted on the user record).
+MAX_FAILED_LOGINS = 10
+LOCKOUT_SECONDS = 15 * 60  # 15 minutes
+
+
+def is_locked(user: dict) -> bool:
+    """True while the account is temporarily locked after too many failures."""
+    until = user.get("locked_until") or 0
+    return float(until) > time.time()
+
+
+def lockout_remaining(user: dict) -> int:
+    until = user.get("locked_until") or 0
+    return max(0, int(float(until) - time.time()))
+
+
+def register_failed_login(user: dict) -> dict:
+    """Increment the failure counter; lock the account once the cap is hit."""
+    failed = int(user.get("failed_logins") or 0) + 1
+    locked_until = time.time() + LOCKOUT_SECONDS if failed >= MAX_FAILED_LOGINS else (user.get("locked_until") or 0)
+    return {"failed_logins": failed, "locked_until": locked_until}
+
+
+def reset_failed_logins(user: dict) -> dict:
+    """Clear the failure counter and lockout after a successful login."""
+    return {"failed_logins": 0, "locked_until": 0}
 
 
 def hash_password(password: str) -> str:
@@ -69,7 +97,14 @@ class Redirect(Exception):
 
 
 COOKIE_NAME = "session_token"
-COOKIE_OPTS = dict(httponly=True, samesite="lax", path="/", max_age=SESSION_TTL)
+
+
+def _secure_cookies() -> bool:
+    env = (os.getenv("ENV") or "").strip().lower()
+    return env == "production" or (os.getenv("SESSION_COOKIE_SECURE") or "").strip() == "1"
+
+
+COOKIE_OPTS = dict(httponly=True, samesite="lax", path="/", max_age=SESSION_TTL, secure=_secure_cookies())
 
 
 def set_session_cookie(response, token: str) -> None:
@@ -77,7 +112,13 @@ def set_session_cookie(response, token: str) -> None:
 
 
 def clear_session_cookie(response) -> None:
-    response.delete_cookie(COOKIE_NAME, path="/")
+    response.delete_cookie(
+        COOKIE_NAME,
+        path="/",
+        httponly=True,
+        samesite="lax",
+        secure=_secure_cookies(),
+    )
 
 
 def user_from_request(request: Request) -> dict | None:

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Round 2 content — {{ config.name }}{% endblock %}
 {% block content %}
 <section class="page-head page-head-compact">
@@ -32,6 +32,7 @@
     </div>
 
     <form method="post" class="panel form-card" action="/student/submission/{{ sub.id }}/round2/content" novalidate>
+      {{ ui.csrf_field() }}
       <fieldset class="form-block">
         <legend class="form-legend">1 · Your revised work</legend>
         <div class="field">

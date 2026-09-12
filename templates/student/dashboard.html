@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}My dashboard — {{ config.name }}{% endblock %}
 {% block content %}
 {% set ns = namespace(selected=0, final=0) %}

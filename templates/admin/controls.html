@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Phase controls — {{ config.name }}{% endblock %}
 {% block content %}
 
@@ -37,6 +37,7 @@
               <p class="phase-hint">{{ hints[flag] }}</p>
             </div>
             <form method="post" action="/admin/controls/{{ flag }}/toggle" class="phase-form">
+              {{ ui.csrf_field() }}
               {% if on %}
                 <button class="btn btn-outline" type="submit">Close</button>
               {% else %}

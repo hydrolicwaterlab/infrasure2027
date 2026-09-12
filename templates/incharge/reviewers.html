@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Reviewers — {{ config.name }}{% endblock %}
 {% block content %}
 
@@ -17,6 +17,7 @@
       {% include "_form_errors.html" %}
       <h2 class="panel-title">Create a reviewer</h2>
       <form method="post" action="/incharge/reviewers/create" class="form-grid" novalidate>
+        {{ ui.csrf_field() }}
         <div class="field"><label for="name">Full name</label><input type="text" id="name" name="name" value="{{ values.name or '' }}" required /></div>
         <div class="field"><label for="email">Email</label><input type="email" id="email" name="email" value="{{ values.email or '' }}" required /></div>
         <div class="field"><label for="password">Temporary password</label><input type="password" id="password" name="password" minlength="8" required /></div>

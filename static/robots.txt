@@ -25,10 +25,17 @@
 #              Design; Pavement/Traffic/Transportation; Surveying &
 #              Geoinformatics; Future Construction Materials; Digital Twin
 #              & AI/ML; Energy Recovery) — see site_config.py
-# Purpose:     Conference information, call for PPT/Poster contributions
-#              (max 2 per student), two-round review, registration &
-#              peer-review portal. Public pages are crawlable
-# Generated:   2026-09-08 for INFRASURE 2027 (https://infrasure2027.civil.iitkgp.ac.in)
+# Purpose:     Conference information, call for contributions (max 2 per
+#              student), two-round review, registration & peer-review portal.
+#              Public pages are crawlable; auth panels are not.
+# Timeline:    Abstract open 10 Sep 2026 → Closes 15 Oct 2026 → Acceptance
+#              30 Oct 2026 → Full paper 30 Nov 2026 → Review 10 Dec 2026 →
+#              Final paper 20 Dec 2026 → Early Bird 30 Dec 2026 → Conference
+#              22-24 Jan 2027
+# Fees:        Student/Faculty ₹2,000 EB / ₹3,000 Spot; Delegate ₹6,000/
+#              ₹8,000; Foreign $150/$200; Accompanying ₹2,000; No refunds.
+# Generated:   2026-09-12 for INFRASURE 2027
+# Updated:     2026-09-12 — timeline, fees, no-refund policy
 # ========================================================================
 # IIT Kharagpur | Department of Civil Engineering
 # ========================================================================
@@ -40,15 +47,25 @@ User-agent: *
 Allow: /
 Crawl-delay: 5
 
-# Allow static assets & public pages
+# Allow public pages
 Allow: /$
+Allow: /policies
+Allow: /sponsorship
 
 # Disallow auth / private panels (noindex anyway)
-Disallow: /admin/
+Disallow: /infrasureadmin/
 Disallow: /student/
+Disallow: /infrasureincharge/
+Disallow: /infrasurereviewer/
+Disallow: /pdf/
 Disallow: /login
 Disallow: /register
 Disallow: /logout
+Disallow: /forgotpassword
+Disallow: /verifyotp
+Disallow: /resetpassword
+Disallow: /ping
+Disallow: /health
 
 # ---------------------------------------------------------
 # AI / LLM Crawlers — BLOCK training & scraping
@@ -105,11 +122,27 @@ Disallow: /
 User-agent: Amazonbot
 Disallow: /
 
+# Additional AI crawlers
+User-agent: MistralAI-User
+Disallow: /
+
+User-agent: Perplexity-User
+Disallow: /
+
+User-agent: YouBot
+Disallow: /
+
 # ---------------------------------------------------------
-# Good bots explicitly allowed (optional, for clarity)
+# Good bots explicitly allowed (for clarity)
 # ---------------------------------------------------------
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Applebot
 Allow: /

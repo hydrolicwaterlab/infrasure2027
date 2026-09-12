@@ -130,6 +130,99 @@ def reset_user_password(uid: str, password: str):
     return user, None
 
 
+def delete_user_and_data(uid: str, actor: dict):
+    """Delete a user and all their data: submissions (+ PDFs), registrations, OTPs.
+
+    Also unassigns them from any submissions they were reviewing.
+    Returns (user, flash_code | None).
+    """
+    user = find_user(uid)
+    if not user:
+        return None, "user_not_found"
+    if user["id"] == actor["id"]:
+        return user, "cannot_delete_self"
+    if user.get("role") == "master_admin":
+        admins = [u for u in load("users") if u.get("role") == "master_admin"]
+        if len(admins) <= 1:
+            return user, "last_admin"
+
+    # submissions owned by this user
+    subs = load("submissions")
+    owned_ids = [s["id"] for s in subs if s.get("user_id") == uid]
+
+    # delete PDFs for owned submissions
+    for sid in owned_ids:
+        p = os.path.join(UPLOAD_DIR, f"{sid}.pdf")
+        try:
+            if os.path.exists(p):
+                os.remove(p)
+        except Exception:
+            pass
+
+    # filter out owned submissions
+    remaining = [s for s in subs if s.get("user_id") != uid]
+
+    # unassign this user as reviewer on remaining submissions
+    dirty = False
+    for s in remaining:
+        if s.get("r1_reviewer_id") == uid:
+            s["r1_reviewer_id"] = ""
+            if s.get("r1_status") == "r1_under_review":
+                s["r1_status"] = "r1_pending"
+                s["r1_comment"] = ""
+                s["r1_reviewed_by"] = ""
+                s["r1_reviewed_at"] = ""
+            dirty = True
+        if s.get("r2_reviewer_id") == uid:
+            s["r2_reviewer_id"] = ""
+            if s.get("r2_status") == "r2_under_review":
+                s["r2_status"] = "r2_pending"
+                s["r2_comment"] = ""
+                s["r2_reviewed_by"] = ""
+                s["r2_reviewed_at"] = ""
+            dirty = True
+        if s.get("r1_reviewed_by") == uid:
+            s["r1_reviewed_by"] = ""
+            dirty = True
+        if s.get("r2_reviewed_by") == uid:
+            s["r2_reviewed_by"] = ""
+            dirty = True
+
+    if owned_ids or dirty:
+        save("submissions", remaining)
+
+    # registrations
+    regs = load("registrations")
+    filtered_regs = [r for r in regs if r.get("user_id") != uid]
+    if len(filtered_regs) != len(regs):
+        save("registrations", filtered_regs)
+
+    # OTPs by email
+    try:
+        otps = load("otps")
+        email = user.get("email") or ""
+        filtered_otps = [o for o in otps if o.get("email") != email]
+        if len(filtered_otps) != len(otps):
+            save("otps", filtered_otps)
+    except Exception:
+        pass
+
+    # delete user record
+    users = load("users")
+    users_filtered = [u for u in users if u["id"] != uid]
+    save("users", users_filtered)
+
+    # invalidate sessions
+    try:
+        from auth import _sessions as _sess
+        for tok in [t for t, sess in list(_sess.items()) if sess.get("user_id") == uid]:
+            _sess.pop(tok, None)
+    except Exception:
+        pass
+
+    return user, None
+
+
 def create_incharge(name: str, email: str, password: str, themes: list[str]) -> dict:
     ordered = [t for t in THEME_LABELS if t in themes]
     return insert(

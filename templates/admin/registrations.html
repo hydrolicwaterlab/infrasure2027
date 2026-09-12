@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Registrations — Admin — {{ config.name }}{% endblock %}
 {% block content %}
 
@@ -15,6 +15,7 @@
   <div class="container">
     <div class="admin-top">{{ ui.admin_nav("registrations") }}</div>
     <div class="panel">
+      {{ ui.search_bar("/admin/registrations", q) }}
       {% if regs %}
         <div class="table-wrap">
           <table class="data-table">
@@ -67,6 +68,7 @@
                   <td>{{ "Yes" if r.fee_paid else "—" }}</td>
                   <td class="cell-actions">
                     <form class="row-form" method="post" action="/admin/registrations/{{ r.id }}/set">
+                      {{ ui.csrf_field() }}
                       {% if r.status != "approved" %}<button class="btn btn-sm btn-ghost" name="action" value="approve" type="submit">Approve</button>{% endif %}
                       {% if r.status != "rejected" %}<button class="btn btn-sm btn-ghost" name="action" value="reject" type="submit">Reject</button>{% endif %}
                       <button class="btn btn-sm btn-ghost" name="action" value="fee" type="submit">{{ "Unmark fee" if r.fee_paid else "Mark fee paid" }}</button>
@@ -78,7 +80,11 @@
           </table>
         </div>
       {% else %}
-        {{ ui.empty_state("No registrations yet", "Students who register for attendance will appear here.") }}
+        {% if q %}
+          {{ ui.empty_state("No registrations match", "No registration found for “%s” — try a different email or clear search." % q, "/admin/registrations", "Clear search") }}
+        {% else %}
+          {{ ui.empty_state("No registrations yet", "Students who register for attendance will appear here.") }}
+        {% endif %}
       {% endif %}
     </div>
   </div>

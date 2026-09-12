@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}FAQs — Admin — {{ config.name }}{% endblock %}
 {% block content %}
 
@@ -20,6 +20,7 @@
       <div class="panel form-card">
         <h2 class="panel-title">Categories</h2>
         <form method="post" action="/admin/faqs/categories/create" class="inline-form">
+          {{ ui.csrf_field() }}
           <input type="text" name="name" placeholder="New category name" value="{{ (values.cat or {}).name or '' }}" required />
           <button class="btn btn-primary btn-sm" type="submit">Add category</button>
         </form>
@@ -32,11 +33,12 @@
                   <span class="badge badge-neutral">{{ c.order }}</span>
                 </summary>
                 <form method="post" action="/admin/faqs/categories/{{ c.id }}/rename" class="reset-form">
+                  {{ ui.csrf_field() }}
                   <input type="text" name="name" value="{{ c.name }}" required />
                   <button class="btn btn-sm btn-primary" type="submit">Rename</button>
                 </form>
                 <form method="post" action="/admin/faqs/categories/{{ c.id }}/delete"
-                      onsubmit="return confirm('Delete this category? Its FAQs must be moved first.');">
+                      data-confirm="Delete this category? Its FAQs must be moved first.">
                   <button class="btn btn-sm btn-ghost" type="submit">Delete category</button>
                 </form>
               </details>
@@ -48,6 +50,7 @@
       <div class="panel form-card">
         <h2 class="panel-title">Add a FAQ</h2>
         <form method="post" action="/admin/faqs/create" novalidate>
+          {{ ui.csrf_field() }}
           <div class="field">
             <label for="category_id">Category</label>
             <select id="category_id" name="category_id" required>
@@ -95,6 +98,7 @@
                     <details class="reset-box edit-box" {% if editing == f.id %}open{% endif %}>
                       <summary class="btn btn-sm btn-ghost">Edit</summary>
                       <form method="post" action="/admin/faqs/{{ f.id }}/edit" class="reset-form">
+                        {{ ui.csrf_field() }}
                         <select name="category_id" required>
                           {% for c in categories %}
                             <option value="{{ c.id }}" {% if c.id == f.category_id %}selected{% endif %}>{{ c.name }}</option>
@@ -107,7 +111,8 @@
                       </form>
                     </details>
                     <form class="row-form" method="post" action="/admin/faqs/{{ f.id }}/delete"
-                          onsubmit="return confirm('Delete this FAQ permanently?');">
+                          data-confirm="Delete this FAQ permanently?">
+                      {{ ui.csrf_field() }}
                       <button class="btn btn-sm btn-ghost" type="submit">Delete</button>
                     </form>
                   </td>

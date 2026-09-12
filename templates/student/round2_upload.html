@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Upload Round 2 PDF — {{ config.name }}{% endblock %}
 {% block content %}
 <section class="page-head page-head-compact">
@@ -45,6 +45,7 @@
 
     <form method="post" class="panel form-card" action="/student/submission/{{ sub.id }}/round2/upload"
           enctype="multipart/form-data" novalidate>
+      {{ ui.csrf_field() }}
       <fieldset class="form-block">
         <legend class="form-legend">Upload PDF</legend>
         <div class="field">

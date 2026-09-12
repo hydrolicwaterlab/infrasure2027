@@ -88,9 +88,22 @@ def clean_email(v: str, strict: bool = True) -> str:
     return v
 
 
+COMMON_PASSWORDS = frozenset({
+    "password", "password1", "password123", "passw0rd", "12345678", "123456789",
+    "1234567890", "qwertyui", "qwerty123", "letmein", "welcome", "welcome1",
+    "iloveyou", "admin123", "administrator", "monkey123", "dragon123",
+    "football", "baseball", "sunshine", "princess", "superman", "shadow123",
+    "1234567a", "abcdefgh", "test1234", "changeme", "default",
+})
+
+
 def clean_password(v: str) -> str:
     if len(v) < 8:
         raise ValueError("Password must be at least 8 characters.")
+    if not re.search(r"[A-Za-z]", v) or not re.search(r"[0-9]", v):
+        raise ValueError("Password must contain at least one letter and one number.")
+    if v.lower() in COMMON_PASSWORDS:
+        raise ValueError("That password is too common — please choose a stronger one.")
     return v
 
 

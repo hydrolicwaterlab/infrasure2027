@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Submissions — Admin — {{ config.name }}{% endblock %}
 {% block content %}
 
@@ -15,7 +15,7 @@
   <div class="container">
     <div class="admin-top">
       {{ ui.admin_nav("submissions") }}
-      {{ ui.filter_form("/admin/submissions", themes, filters.theme, filters.status, filters.type, filters.round) }}
+      {{ ui.filter_form("/admin/submissions", themes, filters.theme, filters.status, filters.type, filters.round, filters.q) }}
     </div>
     <div class="panel">
       <div class="panel-head">

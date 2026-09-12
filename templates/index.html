@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 
 {% macro member_card(m) %}
   <article class="team-card">
@@ -86,7 +86,7 @@
           <path d="M12 21s-7-5.4-7-11a7 7 0 1 1 14 0c0 5.6-7 11-7 11z" />
           <circle cx="12" cy="10" r="2.5" />
         </svg>
-        {{ config.venue.replace(", IIT", " · IIT", 1) }}
+        <a class="venue-link" href="https://maps.app.goo.gl/BjHd6vmrG3pqUPKG9" target="_blank" rel="noopener noreferrer" title="Open venue location in Google Maps">{{ config.venue.replace(", IIT", " · IIT", 1) }}</a>
       </p>
     </div>
     <div class="hero-cta">
@@ -290,6 +290,11 @@
         {% else %}
           <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.75);">Submissions will open soon</p>
         {% endif %}
+        <p class="template-downloads">
+          <a href="/media/INFRASURE2027_Extended Abstract_Template.pdf" download>Download Extended Abstract Template <span aria-hidden="true">&rarr;</span></a>
+          <br />
+          <a href="/media/INFRASURE2027_Full Length_Template.docx" download>Download Full Length Paper Template <span aria-hidden="true">&rarr;</span></a>
+        </p>
       </div>
       <ul class="submit-rules">
         {% for r in config.submit_rules %}
@@ -326,20 +331,20 @@
       <h2 class="display">Important dates &amp; submission</h2>
     </header>
 
-    <!-- 5-step submission journey -->
+    <!-- submission journey timeline -->
     <ol class="milestones">
       {% for m in config.cfp_timeline %}
       <li class="milestone">
         <span class="milestone-node" aria-hidden="true">{{ "%02d"|format(loop.index) }}</span>
         <h3 class="milestone-label">{{ m.label }}</h3>
-        <p class="milestone-date tba">{{ m.date or "To be announced" }}</p>
+        <p class="milestone-date{% if not m.date %} tba{% endif %}">{{ m.date or "To be announced" }}</p>
       </li>
       {% endfor %}
       <li class="milestone milestone--hi">
-        <span class="milestone-node" aria-hidden="true">05</span>
+        <span class="milestone-node" aria-hidden="true">{{ "%02d"|format(config.cfp_timeline|length + 1) }}</span>
         <h3 class="milestone-label">Conference</h3>
         <p class="milestone-date">{{ config.dates }}</p>
-        <p class="milestone-venue">{{ config.venue }}</p>
+        <p class="milestone-venue"><a class="venue-link" href="https://maps.app.goo.gl/BjHd6vmrG3pqUPKG9" target="_blank" rel="noopener noreferrer" title="Open venue location in Google Maps">{{ config.venue }}</a></p>
       </li>
     </ol>
 
@@ -347,14 +352,26 @@
     <div class="cfp-cols">
       <section class="fees">
         <h3 class="mini-head">Registration fees</h3>
-        <dl class="fees-grid">
-          {% for c in config.registration_fees.categories %}
-          <div class="fee">
-            <dt>{{ c.label }}</dt>
-            <dd class="tba">{{ c.amount or "To be announced" }}</dd>
-          </div>
-          {% endfor %}
-        </dl>
+        <div class="fees-table-wrap">
+          <table class="fees-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Early Bird</th>
+                <th>Spot Registration</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in config.registration_fees.categories %}
+              <tr>
+                <td data-label="Category">{{ c.label }}</td>
+                <td data-label="Early Bird">{% if c.early is defined %}{{ c.early }}{% elif c.amount %}{{ c.amount }}{% else %}<span class="tba">To be announced</span>{% endif %}</td>
+                <td data-label="Spot Registration">{% if c.spot is defined %}{{ c.spot }}{% elif c.amount %}{{ c.amount }}{% else %}<span class="tba">To be announced</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
 

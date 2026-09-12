@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Payment — {{ config.name }}{% endblock %}
 {% block content %}
 
@@ -38,6 +38,7 @@
           <dt>Fee</dt><dd><strong>&#8377; TBD</strong><small class="cell-sub">Amount to be announced — this is a preview of the payment step.</small></dd>
         </dl>
         <form method="post" action="/student/payment" class="form-actions">
+          {{ ui.csrf_field() }}
           <button class="btn btn-primary btn-lg" type="submit">Pay now</button>
           <a class="btn btn-ghost btn-lg" href="/student/dashboard">Back to dashboard</a>
         </form>

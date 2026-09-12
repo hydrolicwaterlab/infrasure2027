@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Incharges — Admin — {{ config.name }}{% endblock %}
 {% block content %}
 
@@ -19,6 +19,7 @@
       {% include "_form_errors.html" %}
       <h2 class="panel-title">Create a theme incharge</h2>
       <form method="post" action="/admin/incharges/create" class="form-grid" novalidate>
+        {{ ui.csrf_field() }}
         <div class="field"><label for="name">Full name</label><input type="text" id="name" name="name" value="{{ values.name or '' }}" required /></div>
         <div class="field"><label for="email">Email</label><input type="email" id="email" name="email" value="{{ values.email or '' }}" required /></div>
         <div class="field"><label for="password">Temporary password</label><input type="password" id="password" name="password" minlength="8" required /></div>
@@ -47,6 +48,7 @@
                   <td>{{ ic.email }}</td>
                   <td>
                     <form method="post" action="/admin/incharges/{{ ic.id }}/themes" class="inline-themes">
+                      {{ ui.csrf_field() }}
                       <div class="check-grid check-grid-inline">
                         {% for t in themes %}
                           <label class="check"><input type="checkbox" name="themes" value="{{ t.label }}" {% if t.label in ic.themes %}checked{% endif %} /> {{ t.label }}</label>

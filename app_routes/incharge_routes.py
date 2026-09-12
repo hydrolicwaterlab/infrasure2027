@@ -31,6 +31,7 @@ from app_routes.service import (
 from app_routes.utils import flash_response, render, render_msg
 from auth import require_any
 from db import one
+from otp import send_credentials_email
 from site_config import SITE_CONFIG
 
 router = APIRouter(prefix="/incharge")
@@ -269,10 +270,11 @@ def _assign_submit(request: Request, sid: str, user: dict, round_no: int,
             _, e = assign_reviewer(user, sid, existing, round_no)
             return flash_response(_back_url(user), "reviewer_exists_assigned")
         return _render_assign(request, user, sub, round_no, data,
-                              ["That email belongs to a student / incharge / admin account — use a reviewer account or a different email."])
+                              ["This email is already in use."])
     if errors:
         return _render_assign(request, user, sub, round_no, data, errors)
     reviewer = create_reviewer(form.name, form.email, form.password, [sub["theme"]], created_by=user["id"])
+    send_credentials_email(form.name, form.email, form.password, "Reviewer")
     _, e = assign_reviewer(user, sid, reviewer, round_no)
     return flash_response(_back_url(user), e or "reviewer_created_assigned")
 
@@ -367,11 +369,12 @@ def reviewers_create(
             errors = errors or ["Assign at least one theme you manage."]
         form.themes = ordered
     if not errors and one("users", email=form.email):
-        errors = ["An account with this email already exists."]
+        errors = ["This email is already in use."]
     if errors:
         return render(request, "incharge/reviewers.html", user=user,
                       reviewers=reviewers, themes=my_themes, values=data, errors=errors)
     create_reviewer(form.name, form.email, form.password, form.themes, created_by=user["id"])
+    send_credentials_email(form.name, form.email, form.password, "Reviewer")
     return flash_response("/incharge/reviewers", "reviewer_created")
 
 

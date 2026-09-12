@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import csrf_field with context %}
 {% block title %}Create an account — {{ config.name }}{% endblock %}
 {% block content %}
 <section class="auth-section">
@@ -20,6 +21,7 @@
       <p class="auth-sub">For students, researchers, and early-career engineers.</p>
       {% include "_form_errors.html" %}
       <form method="post" action="/registerinfrasure" novalidate>
+        {{ csrf_field() }}
         <div class="field">
           <label for="name">Full name</label>
           <input type="text" id="name" name="name" value="{{ values.name if values else '' }}" autocomplete="name" required autofocus />
@@ -50,4 +52,6 @@
     </div>
   </div>
 </section>
+
+{% include "_otp_modal.html" %}
 {% endblock %}

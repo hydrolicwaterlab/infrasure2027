@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Round 1 decision — {{ config.name }}{% endblock %}
 {% block content %}
 
@@ -22,6 +22,7 @@
     <div class="panel form-card review-form">
       {% include "_form_errors.html" %}
       <form method="post" action="/incharge/review/{{ sub.id }}" novalidate>
+        {{ ui.csrf_field() }}
         <fieldset class="form-block">
           <legend class="form-legend">Your decision</legend>
           <div class="form-actions form-actions-stack">

@@ -28,11 +28,69 @@ from app_routes.service import (
     thread_count,
     upload_round2_pdf,
 )
-from app_routes.utils import flash_response, render, render_msg
+from app_routes.utils import flash_response, flash_text, render, render_msg
 from auth import require_role
 from db import insert, one, update
+from otp import latest_otp_payload, send_otp, verify_otp
 
 router = APIRouter(prefix="/student")
+
+
+def _attendance_fields(form, user: dict) -> dict:
+    """Turn a validated AttendanceForm into the persistent registration fields."""
+    return {
+        "full_name": form.full_name,
+        "email": user["email"],
+        "phone": form.phone,
+        "participation_mode": form.participation_mode,
+        "participant_category": form.participant_category,
+        "student_level": form.student_level,
+        "ug_program": form.ug_program,
+        "degree_name": form.degree_name,
+        "department": form.department,
+        "institute_name": form.institute_name,
+        "institute_address": form.institute_address,
+        "institute_country": form.institute_country,
+        "institute_zipcode": form.institute_zipcode,
+        "institute_email": form.institute_email,
+        "supervisor_name": form.supervisor_name,
+        "academic_role": form.academic_role,
+        "professor_type": form.professor_type,
+        "company_name": form.company_name,
+        "position": form.position,
+        "company_email": form.company_email,
+        "company_address": form.company_address,
+        "company_country": form.company_country,
+        "company_zipcode": form.company_zipcode,
+        # keep legacy mirrors for older admin views
+        "designation": form.designation or form.participant_category,
+        "affiliation": form.affiliation or form.institute_name or form.company_name,
+    }
+
+
+def _render_info_with_otp(request, user, reg, values, email, otp_error=None, flash=None):
+    """Re-render the participant info form with the OTP modal open."""
+    from app_routes.schemas import _is_personal_email
+    ctx = dict(
+        request=request,
+        template="student/info_form.html",
+        mode="edit" if reg else "create",
+        reg=reg,
+        values={**values, "email": user["email"]},
+        user=user,
+        account_is_personal=_is_personal_email(user["email"]),
+        otp_show=True,
+        otp_email=email,
+        otp_purpose="institute",
+        otp_purpose_label="verify your institute email",
+        otp_resend_url="/student/info",
+        otp_action="/student/verifyotp",
+    )
+    if otp_error:
+        ctx["otp_error"] = otp_error
+    if flash:
+        ctx.update(flash_text(flash))
+    return render(**ctx)
 
 
 def _owned_submission(user: dict, sid: str):
@@ -72,6 +130,13 @@ def info_form(request: Request, user: dict = Depends(require_role("student"))):
     reg = registration_for(user)
     if reg and reg["status"] != "pending":
         return flash_response("/student/dashboard", "attendance_locked")
+    q = request.query_params
+    if q.get("resend"):
+        email = (q.get("otp_email") or "").strip().lower()
+        payload = latest_otp_payload(email, "institute")
+        if payload and payload.get("user_id") == user["id"]:
+            send_otp(email, "institute", payload=payload)
+            return _render_info_with_otp(request, user, reg, payload.get("values", {}), email, flash="institute_otp_sent")
     values = dict(reg) if reg else {"full_name": user["name"], "email": user["email"]}
     # checkbox prefill: if saved email equals account email and account is institutional
     from app_routes.schemas import _is_personal_email
@@ -148,34 +213,22 @@ def info_submit(
                       mode="edit" if reg else "create", reg=reg,
                       values={**data, "email": user["email"]}, errors=errors, user=user,
                       account_is_personal=_is_personal_email(user["email"]))
-    fields = {
-        "full_name": form.full_name,
-        "email": user["email"],
-        "phone": form.phone,
-        "participation_mode": form.participation_mode,
-        "participant_category": form.participant_category,
-        "student_level": form.student_level,
-        "ug_program": form.ug_program,
-        "degree_name": form.degree_name,
-        "department": form.department,
-        "institute_name": form.institute_name,
-        "institute_address": form.institute_address,
-        "institute_country": form.institute_country,
-        "institute_zipcode": form.institute_zipcode,
-        "institute_email": form.institute_email,
-        "supervisor_name": form.supervisor_name,
-        "academic_role": form.academic_role,
-        "professor_type": form.professor_type,
-        "company_name": form.company_name,
-        "position": form.position,
-        "company_email": form.company_email,
-        "company_address": form.company_address,
-        "company_country": form.company_country,
-        "company_zipcode": form.company_zipcode,
-        # keep legacy mirrors for older admin views
-        "designation": form.designation or form.participant_category,
-        "affiliation": form.affiliation or form.institute_name or form.company_name,
-    }
+    # Gate new/changed institute emails behind an OTP.
+    effective_inst = (form.institute_email or "").strip().lower()
+    account_email = user["email"].strip().lower()
+    already_verified = ((reg or {}).get("verified_institute_email") or "").strip().lower()
+    needs_verify = bool(effective_inst) and effective_inst != account_email and effective_inst != already_verified
+    if needs_verify:
+        payload = {
+            "values": _attendance_fields(form, user),
+            "user_id": user["id"],
+            "reg_id": (reg or {}).get("id", ""),
+        }
+        send_otp(effective_inst, "institute", payload=payload)
+        return _render_info_with_otp(request, user, reg, _attendance_fields(form, user), effective_inst,
+                                     flash="institute_otp_sent")
+    fields = _attendance_fields(form, user)
+    fields["verified_institute_email"] = form.institute_email
     if reg:
         update("registrations", reg["id"], fields)
         return flash_response("/student/dashboard", "attendance_updated")
@@ -184,6 +237,41 @@ def info_submit(
         "status": "pending", "fee_paid": False, "created_at": now(),
     }, prefix="r")
     return flash_response("/student/dashboard", "attendance_created")
+
+
+@router.post("/verifyotp")
+def verify_institute_otp(
+    request: Request,
+    user: dict = Depends(require_role("student")),
+    email: str = Form(""),
+    purpose: str = Form(""),
+    code: str = Form(""),
+):
+    if not site_flag("registration_open"):
+        return flash_response("/student/dashboard", "registration_closed")
+    if purpose != "institute":
+        return flash_response("/student/info", "otp_missing")
+    email = (email or "").strip().lower()
+    reg = registration_for(user)
+    if reg and reg["status"] != "pending":
+        return flash_response("/student/dashboard", "attendance_locked")
+    ok, err, payload = verify_otp(email, "institute", code)
+    if not ok:
+        saved = latest_otp_payload(email, "institute")
+        return _render_info_with_otp(request, user, reg, saved.get("values", {}), email,
+                                     otp_error=flash_text(err)["error"])
+    if not payload or payload.get("user_id") != user["id"]:
+        return flash_response("/student/info", "otp_missing")
+    fields = payload.get("values", {})
+    fields["verified_institute_email"] = fields.get("institute_email", "")
+    if reg:
+        update("registrations", reg["id"], fields)
+    else:
+        insert("registrations", {
+            "user_id": user["id"], **fields,
+            "status": "pending", "fee_paid": False, "created_at": now(),
+        }, prefix="r")
+    return flash_response("/student/dashboard", "institute_verified")
 
 
 # ---------- round 1 ----------

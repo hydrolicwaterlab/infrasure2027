@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as ui %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Reviewers — Admin — {{ config.name }}{% endblock %}
 {% block content %}
 
@@ -19,6 +19,7 @@
       {% include "_form_errors.html" %}
       <h2 class="panel-title">Create a reviewer</h2>
       <form method="post" action="/admin/reviewers/create" class="form-grid" novalidate>
+        {{ ui.csrf_field() }}
         <div class="field"><label for="name">Full name</label><input type="text" id="name" name="name" value="{{ values.name or '' }}" required /></div>
         <div class="field"><label for="email">Email</label><input type="email" id="email" name="email" value="{{ values.email or '' }}" required /></div>
         <div class="field"><label for="password">Temporary password</label><input type="password" id="password" name="password" minlength="8" required /></div>
@@ -36,6 +37,7 @@
 
     <div class="panel">
       <div class="panel-head"><h2 class="panel-title">Current reviewers</h2></div>
+      {{ ui.search_bar("/admin/reviewers", q) }}
       {% if reviewers %}
         <div class="table-wrap">
           <table class="data-table">
@@ -47,6 +49,7 @@
                   <td>{{ r.email }}</td>
                   <td>
                     <form method="post" action="/admin/reviewers/{{ r.id }}/themes" class="inline-themes">
+                      {{ ui.csrf_field() }}
                       <div class="check-grid check-grid-inline">
                         {% for t in themes %}
                           <label class="check"><input type="checkbox" name="themes" value="{{ t.label }}" {% if t.label in r.themes %}checked{% endif %} /> {{ t.label }}</label>
@@ -61,7 +64,11 @@
           </table>
         </div>
       {% else %}
-        {{ ui.empty_state("No reviewers yet", "Create the first reviewer with the form above.", None) }}
+        {% if q %}
+          {{ ui.empty_state("No reviewers match", "No reviewer found for “%s” — try a different email or clear search." % q, "/admin/reviewers", "Clear search") }}
+        {% else %}
+          {{ ui.empty_state("No reviewers yet", "Create the first reviewer with the form above.", None) }}
+        {% endif %}
       {% endif %}
     </div>
   </div>
