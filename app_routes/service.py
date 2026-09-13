@@ -4,15 +4,17 @@ Everything two-or-more routers need lives here so routes stay thin and the
 permission rules (theme scoping, self-lockout, round rules) are defined once.
 
 Submission model (phase 2): every presentation is a *single* record in
-`submissions.json`. Round 1 is title + abstract only; the theme incharge routes
-it to a reviewer (or reviews it themselves) and records Selected for Round 2 /
-Not Selected with feedback. If selected, the student picks the format (PPT or
-Poster) for Round 2 — recorded on ``format``. Round 2 content is then submitted
-(a revised title + abstract for Poster, a PDF upload for PPT); it is editable
-until the Round 2 reviewer (or the incharge) starts reviewing. The final
+`submissions.json`. Abstract Round is title + abstract only; the theme incharge routes
+it to a reviewer (or reviews it themselves) and records Selected for the Selection Round /
+Not Selected with feedback. If selected, the student chooses the format (PPT or
+Poster) for the Selection Round; it is not stored until they submit Selection
+Round content (a revised title + abstract for Poster, a PDF upload for PPT), at
+which point ``format`` is committed. It is editable until the Selection Round
+reviewer (or the incharge) starts reviewing. The final
 decision is Selected / Not Selected. Payment arrives in a later phase.
 The student's ``submission_ids`` back-references the thread.
 """
+import logging
 import os
 from datetime import datetime
 
@@ -21,11 +23,12 @@ from auth import hash_password
 from db import find, insert, load, one, save, update
 from site_config import BASE_DIR, SITE_CONFIG
 
+logger = logging.getLogger("service")
+
 ROUND1_DECISIONS = ("r1_selected", "r1_not_selected")
 ROUND1_OPEN = ("r1_pending", "r1_under_review")
 FINAL_DECISIONS = ("selected", "not_selected")
 ROUND2_OPEN = ("r2_pending", "r2_under_review")
-FORMATS = ("ppt", "poster")
 
 UPLOAD_DIR = os.path.join(BASE_DIR, "data", "uploads")
 
@@ -51,18 +54,18 @@ SITE_FLAG_DEFAULTS = {k: False for k in SITE_FLAG_KEYS}
 
 SITE_FLAG_LABELS = {
     "registration_open": "Registration",
-    "round1_open": "Round 1 entry",
-    "round1_results_declared": "Round 1 results",
-    "round2_open": "Round 2 entry",
-    "round2_results_declared": "Round 2 results",
+    "round1_open": "Abstract Round entry",
+    "round1_results_declared": "Abstract Round results",
+    "round2_open": "Selection Round entry",
+    "round2_results_declared": "Selection Round results",
     "payment_open": "Payment",
 }
 
 SITE_FLAG_HINTS = {
     "registration_open": "Students can create accounts and save their participant details.",
     "round1_open": "Students can apply with a title + abstract and edit pending submissions.",
-    "round1_results_declared": "Students can see the Round 1 outcome and move into Round 2.",
-    "round2_open": "Students can choose a format and submit Round 2 content (poster form / PDF).",
+    "round1_results_declared": "Students can see the Abstract Round outcome and move into the Selection Round.",
+    "round2_open": "Students can choose a format and submit Selection Round content (poster form / PDF).",
     "round2_results_declared": "Students can see the final decision and become payment-eligible.",
     "payment_open": "Selected participants can mark their registration fee as paid.",
 }
@@ -146,21 +149,22 @@ def delete_user_and_data(uid: str, actor: dict):
         if len(admins) <= 1:
             return user, "last_admin"
 
-    # submissions owned by this user
+    # submissions owned by this user — by user_id, plus any back-referenced ids
     subs = load("submissions")
-    owned_ids = [s["id"] for s in subs if s.get("user_id") == uid]
+    owned_ids = {s["id"] for s in subs if s.get("user_id") == uid}
+    owned_ids.update(user.get("submission_ids") or [])
 
-    # delete PDFs for owned submissions
+    # delete uploaded PDFs for owned submissions
     for sid in owned_ids:
-        p = os.path.join(UPLOAD_DIR, f"{sid}.pdf")
-        try:
-            if os.path.exists(p):
-                os.remove(p)
-        except Exception:
-            pass
+        path = pdf_path(sid)
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except OSError as exc:
+                logger.warning("Could not delete PDF for submission %s: %s", sid, exc)
 
-    # filter out owned submissions
-    remaining = [s for s in subs if s.get("user_id") != uid]
+    # filter out owned submissions (by user_id or back-reference)
+    remaining = [s for s in subs if s.get("user_id") != uid and s["id"] not in owned_ids]
 
     # unassign this user as reviewer on remaining submissions
     dirty = False
@@ -197,11 +201,15 @@ def delete_user_and_data(uid: str, actor: dict):
     if len(filtered_regs) != len(regs):
         save("registrations", filtered_regs)
 
-    # OTPs by email
+    # OTPs by account email or by the user_id embedded in the payload
     try:
         otps = load("otps")
         email = user.get("email") or ""
-        filtered_otps = [o for o in otps if o.get("email") != email]
+        filtered_otps = [
+            o for o in otps
+            if o.get("email") != email
+            and (o.get("payload") or {}).get("user_id") != uid
+        ]
         if len(filtered_otps) != len(otps):
             save("otps", filtered_otps)
     except Exception:
@@ -292,7 +300,7 @@ def set_reviewer_themes(uid: str, themes: list[str]):
 # ---------- student gates ----------
 
 def has_selected_submission(user: dict) -> bool:
-    """True once a presentation has been *finally* selected (Round 2 decision)."""
+    """True once a presentation has been *finally* selected (Selection Round decision)."""
     return any(s.get("r2_status") == "selected" for s in find("submissions", user_id=user["id"]))
 
 
@@ -362,11 +370,6 @@ def thread_count(user: dict) -> int:
 
 # ---------- submissions / threads ----------
 
-def format_chosen(sub: dict) -> bool:
-    """True once the student has picked PPT or Poster for Round 2."""
-    return (sub.get("format") or "") in FORMATS
-
-
 def round1_view(sub: dict) -> dict:
     """A copy of the record as its Round-1 self — title/abstract + chosen format."""
     out = dict(sub)
@@ -375,7 +378,11 @@ def round1_view(sub: dict) -> dict:
     out["title"] = out["title_r1"]
     out["description"] = out["description_r1"]
     out["format"] = sub.get("format") or ""
+    out["selection_round_authors"] = sub.get("selection_round_authors") or []
     out["round"] = 1
+    out["has_pdf"] = bool(sub.get("pdf_name"))
+    out["pdf_name"] = sub.get("pdf_name") or ""
+    out["pdf_size"] = sub.get("pdf_size") or 0
     return out
 
 
@@ -401,14 +408,14 @@ def round2_view(sub: dict) -> dict:
 
 
 def current_view(sub: dict) -> dict:
-    """The record as it stands today — Round 1 until Round 2 content is submitted."""
+    """The record as it stands today — Abstract Round until Selection Round content is submitted."""
     if sub.get("r2_status"):
         return round2_view(sub)
     return round1_view(sub)
 
 
 def content_received(sub: dict) -> bool:
-    """True once the student has submitted Round 2 content (poster form or PPT PDF)."""
+    """True once the student has submitted Selection Round content (poster form or PPT PDF)."""
     return bool(sub.get("r2_status"))
 
 
@@ -423,7 +430,7 @@ def submission_for(user: dict, sid: str):
 
 
 def create_round1(user: dict, theme: str, title: str, description: str) -> dict:
-    """Open a new presentation thread — Round 1 is title + abstract only."""
+    """Open a new presentation thread — Abstract Round is title + abstract only."""
     record = insert(
         "submissions",
         {
@@ -438,6 +445,7 @@ def create_round1(user: dict, theme: str, title: str, description: str) -> dict:
             "r1_reviewed_at": "",
             "format": "",
             "format_chosen_at": "",
+            "selection_round_authors": [],
             "title_r2": "",
             "description_r2": "",
             "pdf_name": "",
@@ -458,46 +466,41 @@ def create_round1(user: dict, theme: str, title: str, description: str) -> dict:
     return record
 
 
-def choose_format(user: dict, sid: str, fmt: str):
-    """Student picks PPT or Poster for Round 2 — per submission, independently."""
-    sub = one("submissions", id=sid)
-    if not sub or sub["user_id"] != user["id"]:
-        return None, "submission_not_found"
-    if sub["r1_status"] != "r1_selected":
-        return None, "round2_not_ready"
-    if format_chosen(sub):
-        return None, "format_already_chosen"
-    if fmt not in FORMATS:
-        return None, "bad_format"
-    update("submissions", sid, {"format": fmt, "format_chosen_at": now()})
-    return sub, None
-
-
-def _r2_submission_gate(user: dict, sid: str):
+def _r2_submission_gate(user: dict, sid: str, fmt: str):
     """Shared checks before Round-2 content is submitted. Returns (sub, flash_code | None)."""
     sub = one("submissions", id=sid)
     if not sub or sub["user_id"] != user["id"]:
         return None, "submission_not_found"
     if sub["r1_status"] != "r1_selected":
         return None, "round2_not_ready"
-    if not format_chosen(sub):
-        return None, "round2_not_ready"
     if sub.get("r2_status") in ("r2_under_review", "selected", "not_selected"):
         return None, "content_locked"
+    if sub.get("r2_status") == "r2_pending" and (sub.get("format") or "") != fmt:
+        return None, "bad_format"
     return sub, None
 
 
-def submit_round2_content(user: dict, sid: str, title: str, description: str):
-    """Poster: save the revised Round 2 title + abstract (editable until review starts)."""
-    sub, err = _r2_submission_gate(user, sid)
+def submit_round2_content(user: dict, sid: str, title: str, description: str, authors: list | None = None):
+    """Poster: save the revised Selection Round title + abstract + authors (editable until review starts)."""
+    sub, err = _r2_submission_gate(user, sid, "poster")
     if err:
         return None, err
-    if (sub.get("format") or "") != "poster":
-        return None, "bad_format"
+    author_rows = []
+    for a in authors or []:
+        row = a.model_dump() if hasattr(a, "model_dump") else dict(a)
+        author_rows.append({
+            "name": row.get("name", "") or "",
+            "designation": row.get("designation", "") or "",
+            "affiliation": row.get("affiliation", "") or "",
+            "email": row.get("email", "") or "",
+        })
     first = not sub.get("r2_status")
     update("submissions", sid, {
+        "format": "poster",
+        "format_chosen_at": now() if first else (sub.get("format_chosen_at") or now()),
         "title_r2": title,
         "description_r2": description,
+        "selection_round_authors": author_rows,
         "r2_status": "r2_pending",
         "content_received_at": now() if first else sub.get("content_received_at") or now(),
     })
@@ -505,12 +508,10 @@ def submit_round2_content(user: dict, sid: str, title: str, description: str):
 
 
 def upload_round2_pdf(user: dict, sid: str, filename: str, data: bytes):
-    """PPT: validate + store the uploaded PDF and mark Round 2 content as pending."""
-    sub, err = _r2_submission_gate(user, sid)
+    """PPT: validate + store the uploaded PDF and mark Selection Round content as pending."""
+    sub, err = _r2_submission_gate(user, sid, "ppt")
     if err:
         return None, err
-    if (sub.get("format") or "") != "ppt":
-        return None, "bad_format"
     if not data or not data.startswith(b"%PDF"):
         return None, "bad_pdf_type"
     max_bytes = int(SITE_CONFIG.get("max_pdf_mb", 25)) * 1024 * 1024
@@ -522,6 +523,8 @@ def upload_round2_pdf(user: dict, sid: str, filename: str, data: bytes):
         f.write(data)
     first = not sub.get("r2_status")
     update("submissions", sid, {
+        "format": "ppt",
+        "format_chosen_at": now() if first else (sub.get("format_chosen_at") or now()),
         "pdf_name": (filename or "submission.pdf").strip()[:255] or "submission.pdf",
         "pdf_size": len(data),
         "pdf_uploaded_at": now(),
@@ -548,7 +551,7 @@ def can_view_pdf(user: dict, sub: dict) -> bool:
 
 
 def apply_round1_decision(user: dict, sid: str, decision: str, comment: str):
-    """Round 1 decision — Selected for Round 2, or Not Selected (dead end).
+    """Abstract Round decision — Selected for the Selection Round, or Not Selected (dead end).
 
     The assigned reviewer decides when a submission is under review; the theme
     incharge decides on any open submission in their theme (or takes it over).
@@ -669,6 +672,21 @@ def filter_submissions(subs: list, theme: str = "", status: str = "", stype: str
     return subs
 
 
+ROUND_STAGES = {
+    1: {"pending": ("r1_pending", "r1_under_review"), "done": ("r1_selected", "r1_not_selected")},
+    2: {"pending": ("r2_pending", "r2_under_review"), "done": ("selected", "not_selected")},
+}
+
+
+def split_round_stages(subs: list, round_no: int = 1) -> tuple:
+    """Split a round's submissions into (pending, done) by its status field."""
+    stages = ROUND_STAGES[2 if round_no == 2 else 1]
+    key = "r2_status" if round_no == 2 else "r1_status"
+    pending = [s for s in subs if (s.get(key) or "") in stages["pending"]]
+    done = [s for s in subs if (s.get(key) or "") in stages["done"]]
+    return pending, done
+
+
 def decorated_subs(subs: list, students: dict, action_fn, round_no: int = 1) -> list:
     """Decorate each submission with current view fields, `_student`, `_reviewer`, `_round`, `_actions`."""
     out = []
@@ -692,8 +710,10 @@ def submission_actions(user: dict, s: dict, round_no: int = 1) -> list:
             actions.append({"url": f"/incharge/review/{s['id']}", "label": "Review myself", "cls": "btn-outline"})
         elif s["r1_status"] == "r1_under_review":
             actions.append({"url": f"/incharge/change_reviewer/{s['id']}", "label": "Change reviewer", "cls": "btn-outline"})
+        elif s["r1_status"] == "r1_selected" and s.get("r2_status"):
+            actions.append({"url": f"/incharge/submission/{s['id']}?round=2", "label": "Open Selection Round", "cls": "btn-outline"})
     elif s.get("r2_status") == "r2_pending":
-        actions.append({"url": f"/incharge/assign/{s['id']}/round2", "label": "Assign Round 2 reviewer", "cls": "btn-primary"})
+        actions.append({"url": f"/incharge/assign/{s['id']}/round2", "label": "Assign Selection Round reviewer", "cls": "btn-primary"})
         actions.append({"url": f"/incharge/review/{s['id']}/round2", "label": "Review myself", "cls": "btn-outline"})
     elif s.get("r2_status") == "r2_under_review":
         actions.append({"url": f"/incharge/change_reviewer/{s['id']}/round2", "label": "Change reviewer", "cls": "btn-outline"})

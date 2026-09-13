@@ -1,4 +1,4 @@
-"""Reviewer routes — dashboards + Round 1 / Round 2 decisions."""
+"""Reviewer routes — dashboards + Abstract Round / Selection Round decisions."""
 from fastapi import APIRouter, Depends, Form, Request
 
 from app_routes.schemas import RoundOneDecisionForm, RoundTwoDecisionForm, validate
@@ -21,7 +21,7 @@ REVIEWER = require_role("reviewer")
 
 
 def review_for(reviewer: dict, sid: str):
-    """Return (submission, flash_code | None) — Round 1, assigned to this reviewer, still open."""
+    """Return (submission, flash_code | None) — Abstract Round, assigned to this reviewer, still open."""
     sub = one("submissions", id=sid)
     if not sub:
         return None, "submission_not_found"
@@ -33,7 +33,7 @@ def review_for(reviewer: dict, sid: str):
 
 
 def review2_for(reviewer: dict, sid: str):
-    """Return (submission, flash_code | None) — Round 2, assigned to this reviewer, still open."""
+    """Return (submission, flash_code | None) — Selection Round, assigned to this reviewer, still open."""
     sub = one("submissions", id=sid)
     if not sub:
         return None, "submission_not_found"
@@ -57,23 +57,30 @@ def _decorate(subs: list) -> list:
 
 
 @router.get("/dashboard")
-def dashboard(request: Request, user: dict = Depends(REVIEWER)):
+def dashboard(request: Request, user: dict = Depends(REVIEWER), round: int = 1):
+    round_no = 2 if round == 2 else 1
     r1_subs = reviewer_submissions(user)
     r2_subs = reviewer_round2_submissions(user)
-    to_review = [s for s in r1_subs if s["r1_status"] == "r1_under_review"]
-    done = [s for s in r1_subs if s["r1_status"] in ("r1_selected", "r1_not_selected")]
-    r2_to_review = [s for s in r2_subs if s.get("r2_status") == "r2_under_review"]
-    r2_done = [s for s in r2_subs if s.get("r2_status") in ("selected", "not_selected")]
+    to_review_count = (
+        sum(1 for s in r1_subs if s["r1_status"] == "r1_under_review")
+        + sum(1 for s in r2_subs if s.get("r2_status") == "r2_under_review")
+    )
+    if round_no == 2:
+        pending = [s for s in r2_subs if s.get("r2_status") == "r2_under_review"]
+        done = [s for s in r2_subs if s.get("r2_status") in ("selected", "not_selected")]
+    else:
+        pending = [s for s in r1_subs if s["r1_status"] == "r1_under_review"]
+        done = [s for s in r1_subs if s["r1_status"] in ("r1_selected", "r1_not_selected")]
     return render_msg(
         request,
         "reviewer/dashboard.html",
         msg=request.query_params.get("msg"),
         user=user,
         themes=SITE_CONFIG["themes"],
-        to_review=_decorate(to_review),
+        pending=_decorate(pending),
         done=_decorate(done),
-        r2_to_review=_decorate(r2_to_review),
-        r2_done=_decorate(r2_done),
+        round_no=round_no,
+        to_review_count=to_review_count,
     )
 
 
@@ -125,7 +132,7 @@ def review_submit(
 def review2_form(request: Request, sid: str, user: dict = Depends(REVIEWER)):
     sub, err = review2_for(user, sid)
     if err:
-        return flash_response("/reviewer/dashboard", err)
+        return flash_response("/reviewer/dashboard?round=2", err)
     return render_msg(
         request,
         "reviewer/review2.html",
@@ -147,7 +154,7 @@ def review2_submit(
 ):
     sub, err = review2_for(user, sid)
     if err:
-        return flash_response("/reviewer/dashboard", err)
+        return flash_response("/reviewer/dashboard?round=2", err)
     form, errors = validate(RoundTwoDecisionForm, {"decision": decision, "comment": comment})
     if errors:
         return render_msg(
@@ -161,5 +168,5 @@ def review2_submit(
         )
     _, e = apply_final_decision(user, sid, form.decision, form.comment)
     if e:
-        return flash_response("/reviewer/dashboard", e)
-    return flash_response("/reviewer/dashboard", "final_decision_saved")
+        return flash_response("/reviewer/dashboard?round=2", e)
+    return flash_response("/reviewer/dashboard?round=2", "final_decision_saved")

@@ -26,23 +26,41 @@
 
 <section class="dash-section">
   <div class="container">
-    {{ ui.filter_form("/incharge/dashboard", themes, filters.theme, filters.status, filters.type, filters.round) }}
+    {{ ui.round_tabs("/incharge/dashboard", filters.round) }}
+    {{ ui.filter_form("/incharge/dashboard", themes, filters.theme, filters.status, filters.type, filters.round, show_round=False) }}
     <div class="panel">
       <div class="panel-head">
-        <h2 class="panel-title">Round {{ filters.round }} submissions{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
+        <h2 class="panel-title">Pending{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
         <p class="panel-sub">
           {% if filters.round == 2 %}
-            Round 2 content (poster abstract / PPT PDF) needs a reviewer — or your own decision — to reach the final Selected / Not Selected outcome.
+            Selection Round content that still needs a reviewer or your own decision.
           {% else %}
-            Each Round 1 needs a reviewer (or your own review) to decide Selected for Round 2 or Not Selected.
+            Abstract Round submissions that still need a reviewer or your own decision.
           {% endif %}
         </p>
       </div>
       {{ ui.subs_table(
-          subs, themes,
-          "Nothing to review here yet",
-          "When a student applies under one of your themes, it appears here with the abstract and student details.",
-          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission", round_no=filters.round) }}
+          pending_subs, themes,
+          "Nothing pending",
+          "Once a student applies under one of your themes, it appears here awaiting a decision.",
+          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission", round_no=filters.round, show_title=False) }}
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Done{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
+        <p class="panel-sub">
+          {% if filters.round == 2 %}
+            Final decisions recorded for this round.
+          {% else %}
+            Submissions already decided for the Selection Round or Not Selected.
+          {% endif %}
+        </p>
+      </div>
+      {{ ui.subs_table(
+          done_subs, themes,
+          "No decisions yet",
+          "Decisions you or your reviewers record will be listed here.",
+          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission", round_no=filters.round, show_title=False) }}
     </div>
   </div>
 </section>

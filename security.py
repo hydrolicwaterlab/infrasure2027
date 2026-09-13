@@ -28,7 +28,7 @@ CSP = (
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src https://fonts.gstatic.com; "
     "img-src 'self' data:; "
-    "frame-ancestors 'none'; "
+    "frame-ancestors 'self'; "
     "form-action 'self'; "
     "base-uri 'self'"
 )
@@ -52,7 +52,7 @@ class SecurityHeadersMiddleware:
         async def send_wrapper(message):
             if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
-                headers["X-Frame-Options"] = "DENY"
+                headers["X-Frame-Options"] = "SAMEORIGIN"
                 headers["X-Content-Type-Options"] = "nosniff"
                 headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
                 headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"

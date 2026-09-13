@@ -69,8 +69,7 @@ def send_otp(email: str, purpose: str, payload: dict | None = None) -> str:
         },
         prefix="o",
     )
-    if _debug():
-        print(f"[OTP:{purpose}] {email} -> {code}")
+    print(f"[OTP:{purpose}] {email} -> {code}")
     _mail_best_effort(email, purpose, code)
     return code
 

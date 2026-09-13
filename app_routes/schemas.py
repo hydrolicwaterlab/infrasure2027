@@ -4,6 +4,7 @@ import re
 from pydantic import BaseModel, field_validator, model_validator
 
 MAX_SUBMISSIONS = 2
+MAX_AUTHORS = 100
 FORMATS = ("ppt", "poster")
 ROUND1_DECISIONS = ("r1_selected", "r1_not_selected")
 DESIGNATIONS = ("UG", "PG", "PhD Scholar", "Faculty", "Industry", "Other")
@@ -21,7 +22,7 @@ ADMIN_REG_STATUS = ("approved", "rejected")
 THEME_LABELS = tuple(f"Theme {i}" for i in range(1, 10))
 
 EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
-PHONE_RE = r"^\+?[0-9][0-9 \-]{8,14}$"
+PHONE_RE = r"^\+?[0-9]{1,4} [0-9]{6,15}$"
 
 # Common free/personal email domains that are NOT allowed for institute/company email
 PERSONAL_EMAIL_DOMAINS = frozenset({
@@ -196,8 +197,75 @@ def clean_description(v: str) -> str:
     return v
 
 
+def clean_author_name(v: str) -> str:
+    v = v.strip()
+    if not v:
+        raise ValueError("Author name is required.")
+    if len(v) > 120:
+        raise ValueError("Author name must be 120 characters or fewer.")
+    return v
+
+
+def clean_author_designation(v: str) -> str:
+    v = v.strip()
+    if not v:
+        raise ValueError("Author designation is required.")
+    if len(v) > 120:
+        raise ValueError("Author designation must be 120 characters or fewer.")
+    return v
+
+
+def clean_author_affiliation(v: str) -> str:
+    v = v.strip()
+    if not v:
+        raise ValueError("Author affiliation is required.")
+    if len(v) > 200:
+        raise ValueError("Author affiliation must be 200 characters or fewer.")
+    return v
+
+
+def clean_author_email(v: str) -> str:
+    v = v.strip()
+    if not v:
+        raise ValueError("Author email is required.")
+    if len(v) > 200:
+        raise ValueError("Author email must be 200 characters or fewer.")
+    return v
+
+
+class AuthorForm(BaseModel):
+    """A single author row on a Poster Selection Round form — all plain text, email not verified."""
+
+    model_config = {"validate_default": True}
+
+    name: str = ""
+    designation: str = ""
+    affiliation: str = ""
+    email: str = ""
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, v: str) -> str:
+        return clean_author_name(v)
+
+    @field_validator("designation")
+    @classmethod
+    def _designation(cls, v: str) -> str:
+        return clean_author_designation(v)
+
+    @field_validator("affiliation")
+    @classmethod
+    def _affiliation(cls, v: str) -> str:
+        return clean_author_affiliation(v)
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, v: str) -> str:
+        return clean_author_email(v)
+
+
 class SubmissionForm(BaseModel):
-    """Round 1 — title + abstract only. The format (PPT/Poster) is chosen in Round 2."""
+    """Abstract Round — title + abstract only. The format (PPT/Poster) is chosen in the Selection Round."""
 
     theme: str = ""
     title: str = ""
@@ -222,7 +290,7 @@ class SubmissionForm(BaseModel):
 
 
 class FormatChoiceForm(BaseModel):
-    """Round 2 starts with the student choosing PPT or Poster — per submission."""
+    """Selection Round starts with the student choosing PPT or Poster — per submission."""
 
     format: str = ""
 
@@ -235,7 +303,7 @@ class FormatChoiceForm(BaseModel):
 
 
 class RoundOneDecisionForm(BaseModel):
-    """Round 1 decision — Selected for Round 2, or Not Selected (dead end).
+    """Abstract Round decision — Selected for the Selection Round, or Not Selected (dead end).
 
     Recorded by the assigned reviewer (when under review) or by the theme incharge
     directly. Always accompanies feedback shown to the student.
@@ -248,7 +316,7 @@ class RoundOneDecisionForm(BaseModel):
     @classmethod
     def _decision(cls, v: str) -> str:
         if v not in ROUND1_DECISIONS:
-            raise ValueError("Please choose Selected for Round 2 or Not Selected.")
+            raise ValueError("Please choose Selected for the Selection Round or Not Selected.")
         return v
 
     @field_validator("comment")
@@ -260,10 +328,11 @@ class RoundOneDecisionForm(BaseModel):
 
 
 class RoundTwoForm(BaseModel):
-    """Round 2 (Poster) — revised title + abstract addressing the Round 1 feedback."""
+    """Selection Round (Poster) — revised title + abstract addressing the Abstract Round feedback."""
 
     title: str = ""
     description: str = ""
+    authors: list[AuthorForm] = []
 
     @field_validator("title")
     @classmethod
@@ -275,12 +344,21 @@ class RoundTwoForm(BaseModel):
     def _description(cls, v: str) -> str:
         return clean_description(v)
 
+    @field_validator("authors")
+    @classmethod
+    def _authors(cls, v: list[AuthorForm]) -> list[AuthorForm]:
+        if not v:
+            raise ValueError("Please add at least one author.")
+        if len(v) > MAX_AUTHORS:
+            raise ValueError(f"Please list no more than {MAX_AUTHORS} authors.")
+        return v
+
 
 class RoundTwoDecisionForm(BaseModel):
     """Final decision — Selected, or Not Selected (dead end).
 
-    Recorded by the assigned Round 2 reviewer (when under review) or by the theme
-    incharge directly. Always accompanies feedback shown to the student.
+    Recorded by the assigned Selection Round reviewer (when under review) or by the theme
+    incharge directly. The decision is a plain confirmation; feedback is not collected here.
     """
 
     decision: str = ""
@@ -296,9 +374,7 @@ class RoundTwoDecisionForm(BaseModel):
     @field_validator("comment")
     @classmethod
     def _comment(cls, v: str) -> str:
-        if len(v.strip()) < 10:
-            raise ValueError("Please leave at least a short note with your feedback.")
-        return v.strip()[:1000]
+        return (v or "").strip()[:1000]
 
 
 class AnnouncementForm(BaseModel):

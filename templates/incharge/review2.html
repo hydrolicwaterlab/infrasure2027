@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui with context %}
-{% block title %}Round 2 decision — {{ config.name }}{% endblock %}
+{% block title %}Selection Round decision — {{ config.name }}{% endblock %}
 {% block content %}
 
 <section class="page-head page-head-compact">
   <div class="container">
-    <p class="eyebrow eyebrow-on-dark">Review · {{ sub.id }} · Round 2</p>
+    <p class="eyebrow eyebrow-on-dark">Review · {{ sub.id }} · Selection Round</p>
     <h1 class="display display-on-dark">{{ sub.title }}</h1>
     <p class="page-head-sub">
-      Decide the final outcome — Selected, or Not Selected. Your feedback is shown to the student.
+      Confirm the final outcome — Selected, or Not Selected.
     </p>
   </div>
 </section>
@@ -31,17 +31,15 @@
       <form method="post" action="/incharge/review/{{ sub.id }}/round2" novalidate>
         {{ ui.csrf_field() }}
         <fieldset class="form-block">
-          <legend class="form-legend">Your decision</legend>
+          <legend class="form-legend">Confirm your decision</legend>
+          <p class="side-note">Confirm the final outcome for this submission — it is recorded immediately.</p>
           <div class="form-actions form-actions-stack">
-            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="selected">Selected</button>
+            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="selected"
+                    onclick="return confirm('Confirm: Selected for INFRASURE 2027?')">Selected</button>
             <button class="btn btn-danger btn-lg btn-block" type="submit" name="decision" value="not_selected"
                     onclick="return confirm('Not selected ends this submission — the student cannot resubmit it. Continue?')">Not selected</button>
           </div>
         </fieldset>
-        <div class="field">
-          <label for="comment">Feedback (shown to the student)</label>
-          <textarea id="comment" name="comment" rows="8" maxlength="1000" placeholder="Why it moves forward, or how it could be improved…" required>{{ values.comment or "" }}</textarea>
-        </div>
         <div class="form-actions">
           <a class="btn btn-ghost btn-lg" href="{{ back_url }}">Cancel</a>
         </div>

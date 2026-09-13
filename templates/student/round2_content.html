@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui with context %}
-{% block title %}Round 2 content — {{ config.name }}{% endblock %}
+{% block title %}Selection Round content — {{ config.name }}{% endblock %}
 {% block content %}
 <section class="page-head page-head-compact">
   <div class="container">
-    <p class="eyebrow eyebrow-on-dark">Student portal · Round 2 · Poster</p>
-    <h1 class="display display-on-dark">Address the feedback — Round 2.</h1>
-    <p class="page-head-sub">Recraft your poster based on the reviewer's questions. Your theme and format stay fixed — you can revise the title and abstract.</p>
+    <p class="eyebrow eyebrow-on-dark">Participant portal · Selection Round · Poster</p>
+    <h1 class="display display-on-dark">Address the feedback — Selection Round.</h1>
+    <p class="page-head-sub">Recraft your poster based on the reviewer's questions. Your theme stays fixed; once you submit, your format (Poster) and content are locked.</p>
   </div>
 </section>
 
@@ -15,9 +15,9 @@
     {% include "_form_errors.html" %}
 
     <div class="panel form-card">
-      <h2 class="panel-title">Feedback on your Round 1</h2>
+      <h2 class="panel-title">Feedback on your Abstract Round</h2>
       <dl class="reg-dl">
-        <dt>Your presentation</dt><dd>{{ ui.type_badge(sub.format) }} · {{ sub.theme }} · {{ ui.status_badge(sub.r1_status) }}</dd>
+        <dt>Your presentation</dt><dd>{{ ui.type_badge(chosen_format) }} · {{ sub.theme }} · {{ ui.status_badge(sub.r1_status) }}</dd>
         {% if sub.r1_reviewer_id %}
           <dt>Reviewed by</dt><dd>{{ (students.get(sub.r1_reviewer_id) or {}).get("name", "—") or "—" }}{% if sub.r1_reviewed_at %} · {{ sub.r1_reviewed_at[:10] }}{% endif %}</dd>
         {% endif %}
@@ -47,11 +47,65 @@
         </div>
       </fieldset>
 
+      <fieldset class="form-block">
+        <legend class="form-legend">2 · Authors</legend>
+        <p class="field-hint">List every author of this poster — name, designation, affiliation and email. All fields are compulsory; email is not verified.</p>
+        <div id="authors-list" class="authors-list">
+          {% for a in (values.authors or [{}]) %}
+            <div class="author-row">
+              <div class="field">
+                <label>Author name</label>
+                <input type="text" name="author_name" maxlength="120" value="{{ a.name or '' }}" required />
+              </div>
+              <div class="field">
+                <label>Designation</label>
+                <input type="text" name="author_designation" maxlength="120" value="{{ a.designation or '' }}" required />
+              </div>
+              <div class="field">
+                <label>Affiliation</label>
+                <input type="text" name="author_affiliation" maxlength="200" value="{{ a.affiliation or '' }}" required />
+              </div>
+              <div class="field">
+                <label>Author email</label>
+                <input type="text" name="author_email" maxlength="200" value="{{ a.email or '' }}" required />
+              </div>
+              <button type="button" class="btn btn-sm btn-ghost author-remove" aria-label="Remove author">Remove</button>
+            </div>
+          {% endfor %}
+        </div>
+        <template id="author-row-template">
+          <div class="author-row">
+            <div class="field">
+              <label>Author name</label>
+              <input type="text" name="author_name" maxlength="120" required />
+            </div>
+            <div class="field">
+              <label>Designation</label>
+              <input type="text" name="author_designation" maxlength="120" required />
+            </div>
+            <div class="field">
+              <label>Affiliation</label>
+              <input type="text" name="author_affiliation" maxlength="200" required />
+            </div>
+            <div class="field">
+              <label>Author email</label>
+              <input type="text" name="author_email" maxlength="200" required />
+            </div>
+            <button type="button" class="btn btn-sm btn-ghost author-remove" aria-label="Remove author">Remove</button>
+          </div>
+        </template>
+        <button type="button" class="btn btn-sm btn-outline" id="author-add">+ Add author</button>
+      </fieldset>
+
       <div class="form-actions">
-        <button class="btn btn-primary btn-lg" type="submit">Save Round 2 content</button>
+        <button class="btn btn-primary btn-lg" type="submit">{{ "Save changes" if sub.r2_status else "Submit Selection Round content" }}</button>
         <a class="btn btn-ghost btn-lg" href="/student/submission/{{ sub.id }}">Cancel</a>
       </div>
+      <p class="field-hint">Format: Poster{{ " (locked)" if sub.r2_status else " — you cannot change the format after you submit." }}</p>
     </form>
   </div>
 </section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/authors.js" defer></script>
 {% endblock %}

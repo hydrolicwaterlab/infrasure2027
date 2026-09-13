@@ -5,13 +5,13 @@
 
 <section class="page-head page-head-compact">
   <div class="container">
-    <p class="eyebrow eyebrow-on-dark">Incharge · Assign reviewer · Round {{ round }}</p>
+    <p class="eyebrow eyebrow-on-dark">Incharge · Assign reviewer · {{ "Abstract Round" if round == 1 else "Selection Round" }}</p>
     <h1 class="display display-on-dark">{{ sub.title }}</h1>
     <p class="page-head-sub">
       {% if round == 2 %}
-        Round 2 content is in. Pick an existing reviewer who covers {{ sub.theme }}, or create a new one — they'll decide the final Selected / Not Selected outcome.
+        Selection Round content is in. Pick an existing reviewer who covers {{ sub.theme }}, or create a new one — they'll decide the final Selected / Not Selected outcome.
       {% else %}
-        Pick an existing reviewer who covers {{ sub.theme }}, or create a new one — they'll review Round 1 and decide Selected for Round 2 or Not Selected.
+        Pick an existing reviewer who covers {{ sub.theme }}, or create a new one — they'll review the Abstract Round and decide Selected for the Selection Round or Not Selected.
       {% endif %}
     </p>
   </div>

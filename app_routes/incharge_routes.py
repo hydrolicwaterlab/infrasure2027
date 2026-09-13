@@ -23,6 +23,7 @@ from app_routes.service import (
     round1_view,
     round2_view,
     scoped_submissions,
+    split_round_stages,
     students_map,
     submission_actions,
     submission_for,
@@ -71,14 +72,19 @@ def dashboard(
 ):
     round_no = 2 if round == 2 else 1
     all_subs = scoped_submissions(user)
-    subs = _decorate(user, filter_submissions(all_subs, theme, status, type, round_no), round_no)
+    filtered = filter_submissions(all_subs, theme, status, type, round_no)
+    pending_subs, done_subs = split_round_stages(filtered, round_no)
+    pending_subs = _decorate(user, pending_subs, round_no)
+    done_subs = _decorate(user, done_subs, round_no)
     pending, under_review = _round_stats(all_subs, round_no)
     return render_msg(
         request,
         "incharge/dashboard.html",
         msg=request.query_params.get("msg"),
         user=user,
-        subs=subs,
+        subs=pending_subs + done_subs,
+        pending_subs=pending_subs,
+        done_subs=done_subs,
         themes=_theme_choices(user),
         filters={"theme": theme, "status": status, "type": type, "round": round_no},
         pending=pending,
@@ -87,11 +93,11 @@ def dashboard(
 
 
 @router.get("/submission/{sid}")
-def submission_detail(request: Request, sid: str, user: dict = Depends(PANEL_USER), round: int = 1):
+def submission_detail(request: Request, sid: str, user: dict = Depends(PANEL_USER), round: int = 0):
     sub, err = submission_for(user, sid)
     if err:
         return flash_response(_back_url(user), err)
-    round_no = 2 if round == 2 else 1
+    round_no = round if round in (1, 2) else (2 if sub.get("r2_status") else 1)
     view = round2_view(sub) if round_no == 2 else round1_view(sub)
     return render(
         request,
@@ -106,7 +112,7 @@ def submission_detail(request: Request, sid: str, user: dict = Depends(PANEL_USE
     )
 
 
-# ---------- review: Round 1 decision (Selected for Round 2 / Not Selected) ----------
+# ---------- review: Abstract Round decision (Selected for the Selection Round / Not Selected) ----------
 
 @router.get("/review/{sid}")
 def review_form(request: Request, sid: str, user: dict = Depends(PANEL_USER)):
@@ -156,17 +162,17 @@ def review_submit(
 def review2_form(request: Request, sid: str, user: dict = Depends(PANEL_USER)):
     sub, err = submission_for(user, sid)
     if err:
-        return flash_response(_back_url(user), err)
+        return flash_response(_back_url(user, 2), err)
     if sub.get("r2_status") not in ("r2_pending", "r2_under_review"):
-        return flash_response(_back_url(user), "bad_status")
+        return flash_response(_back_url(user, 2), "bad_status")
     if not sub.get("r2_status"):
-        return flash_response(_back_url(user), "need_content")
+        return flash_response(_back_url(user, 2), "need_content")
     values = {"decision": "", "comment": sub.get("r2_comment") or ""}
     return render_msg(
         request, "incharge/review2.html",
         msg=request.query_params.get("msg"),
         user=user, sub=round2_view(sub), students=students_map(), themes=_theme_choices(user),
-        back_url=_back_url(user), values=values, errors=None,
+        back_url=_back_url(user, 2), values=values, errors=None,
     )
 
 
@@ -180,23 +186,23 @@ def review2_submit(
 ):
     sub, err = submission_for(user, sid)
     if err:
-        return flash_response(_back_url(user), err)
+        return flash_response(_back_url(user, 2), err)
     if sub.get("r2_status") not in ("r2_pending", "r2_under_review"):
-        return flash_response(_back_url(user), "bad_status")
+        return flash_response(_back_url(user, 2), "bad_status")
     form, errors = validate(RoundTwoDecisionForm, {"decision": decision, "comment": comment})
     if errors:
         return render_msg(
             request, "incharge/review2.html",
             user=user, sub=round2_view(sub), students=students_map(), themes=_theme_choices(user),
-            back_url=_back_url(user), values={"decision": decision, "comment": comment}, errors=errors,
+            back_url=_back_url(user, 2), values={"decision": decision, "comment": comment}, errors=errors,
         )
     _, e = apply_final_decision(user, sid, form.decision, form.comment)
     if e:
-        return flash_response(_back_url(user), e)
-    return flash_response(_back_url(user), "final_decision_saved")
+        return flash_response(_back_url(user, 2), e)
+    return flash_response(_back_url(user, 2), "final_decision_saved")
 
 
-# ---------- reviewer assignment (Round 1 / Round 2) ----------
+# ---------- reviewer assignment (Abstract Round / Selection Round) ----------
 
 def _render_assign(request, user: dict, sub: dict, round_no: int, values: dict, errors: list | None):
     return render(
@@ -226,11 +232,11 @@ def assign_form(request: Request, sid: str, user: dict = Depends(PANEL_USER)):
 def assign2_form(request: Request, sid: str, user: dict = Depends(PANEL_USER)):
     sub, err = submission_for(user, sid)
     if err:
-        return flash_response(_back_url(user), err)
+        return flash_response(_back_url(user, 2), err)
     if sub.get("r2_status") != "r2_pending":
-        return flash_response(_back_url(user), "submission_not_pending")
+        return flash_response(_back_url(user, 2), "submission_not_pending")
     if not sub.get("r2_status"):
-        return flash_response(_back_url(user), "need_content")
+        return flash_response(_back_url(user, 2), "need_content")
     return _render_assign(request, user, sub, 2, {}, None)
 
 
@@ -238,14 +244,14 @@ def _assign_submit(request: Request, sid: str, user: dict, round_no: int,
                    reviewer_id: str, name: str, email: str, password: str):
     sub, err = submission_for(user, sid)
     if err:
-        return flash_response(_back_url(user), err)
+        return flash_response(_back_url(user, round_no), err)
     if round_no == 1:
         if sub["r1_status"] != "r1_pending":
-            return flash_response(_back_url(user), "submission_not_pending")
+            return flash_response(_back_url(user, round_no), "submission_not_pending")
     elif sub.get("r2_status") != "r2_pending":
-        return flash_response(_back_url(user), "submission_not_pending")
+        return flash_response(_back_url(user, round_no), "submission_not_pending")
     elif not sub.get("r2_status"):
-        return flash_response(_back_url(user), "need_content")
+        return flash_response(_back_url(user, round_no), "need_content")
     eligible = eligible_reviewers(sub["theme"])
 
     if reviewer_id:
@@ -257,7 +263,7 @@ def _assign_submit(request: Request, sid: str, user: dict, round_no: int,
             return _render_assign(request, user, sub, round_no, {"reviewer_id": reviewer_id},
                                   ["That reviewer isn't assigned to this theme — adjust their themes first."])
         _, e = assign_reviewer(user, sid, reviewer, round_no)
-        return flash_response(_back_url(user), e or "assigned_reviewer")
+        return flash_response(_back_url(user, round_no), e or "assigned_reviewer")
 
     data = {"name": name, "email": email, "password": password}
     form, errors = validate(ReviewerCreateForm, data)
@@ -268,7 +274,7 @@ def _assign_submit(request: Request, sid: str, user: dict, round_no: int,
                 return _render_assign(request, user, sub, round_no, data,
                                       ["That email is already a reviewer but not assigned to this theme — adjust their themes first."])
             _, e = assign_reviewer(user, sid, existing, round_no)
-            return flash_response(_back_url(user), "reviewer_exists_assigned")
+            return flash_response(_back_url(user, round_no), "reviewer_exists_assigned")
         return _render_assign(request, user, sub, round_no, data,
                               ["This email is already in use."])
     if errors:
@@ -276,7 +282,7 @@ def _assign_submit(request: Request, sid: str, user: dict, round_no: int,
     reviewer = create_reviewer(form.name, form.email, form.password, [sub["theme"]], created_by=user["id"])
     send_credentials_email(form.name, form.email, form.password, "Reviewer")
     _, e = assign_reviewer(user, sid, reviewer, round_no)
-    return flash_response(_back_url(user), e or "reviewer_created_assigned")
+    return flash_response(_back_url(user, round_no), e or "reviewer_created_assigned")
 
 
 @router.post("/assign/{sid}")
@@ -317,7 +323,7 @@ def takeover(request: Request, sid: str, user: dict = Depends(PANEL_USER)):
 def takeover2(request: Request, sid: str, user: dict = Depends(PANEL_USER)):
     _, err = unassign_reviewer(user, sid, 2)
     if err:
-        return flash_response(_back_url(user), err)
+        return flash_response(_back_url(user, 2), err)
     return flash_response(f"/incharge/review/{sid}/round2", "reviewer_removed")
 
 

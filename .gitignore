@@ -17,11 +17,4 @@ dummydata/
 /tmp/
 /tmpconfig/
 graphify-out
-webinfo_md/architecture.md
-webinfo_md/datamodel.md
-webinfo_md/mainpage_sections.md
-webinfo_md/roadmap.md
-webinfo_md/objective.md
-webinfo_md/map.md
-webinfo_md/roles.md
-webinfo_md/recommended_website_pages.md
+webinfo_md/

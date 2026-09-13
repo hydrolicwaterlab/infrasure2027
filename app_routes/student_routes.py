@@ -1,4 +1,6 @@
 """Student routes — dashboard, threads (round 1 apply/edit), format choice, round 2 content, info, payment."""
+import re
+
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 
@@ -11,7 +13,6 @@ from app_routes.schemas import (
     validate,
 )
 from app_routes.service import (
-    choose_format,
     create_round1,
     current_view,
     has_selected_submission,
@@ -34,6 +35,15 @@ from db import insert, one, update
 from otp import latest_otp_payload, send_otp, verify_otp
 
 router = APIRouter(prefix="/student")
+
+
+def _split_phone(v: str) -> tuple[str, str]:
+    """Split a stored phone value into (country_code, local_number)."""
+    v = (v or "").strip()
+    m = re.match(r"^(\+\d{1,4})\s*(.*)$", v)
+    if m:
+        return m.group(1), m.group(2)
+    return "+91", v
 
 
 def _attendance_fields(form, user: dict) -> dict:
@@ -71,12 +81,14 @@ def _attendance_fields(form, user: dict) -> dict:
 def _render_info_with_otp(request, user, reg, values, email, otp_error=None, flash=None):
     """Re-render the participant info form with the OTP modal open."""
     from app_routes.schemas import _is_personal_email
+    vals = {**values, "email": user["email"]}
+    vals["phone_country_code"], vals["phone_number"] = _split_phone(vals.get("phone"))
     ctx = dict(
         request=request,
         template="student/info_form.html",
         mode="edit" if reg else "create",
         reg=reg,
-        values={**values, "email": user["email"]},
+        values=vals,
         user=user,
         account_is_personal=_is_personal_email(user["email"]),
         otp_show=True,
@@ -138,6 +150,7 @@ def info_form(request: Request, user: dict = Depends(require_role("student"))):
             send_otp(email, "institute", payload=payload)
             return _render_info_with_otp(request, user, reg, payload.get("values", {}), email, flash="institute_otp_sent")
     values = dict(reg) if reg else {"full_name": user["name"], "email": user["email"]}
+    values["phone_country_code"], values["phone_number"] = _split_phone(values.get("phone"))
     # checkbox prefill: if saved email equals account email and account is institutional
     from app_routes.schemas import _is_personal_email
     account_is_personal = _is_personal_email(user["email"])
@@ -157,6 +170,7 @@ def info_submit(
     user: dict = Depends(require_role("student")),
     full_name: str = Form(""),
     phone: str = Form(""),
+    phone_country_code: str = Form("+91"),
     participation_mode: str = Form("in_person"),
     participant_category: str = Form(""),
     student_level: str = Form(""),
@@ -188,8 +202,12 @@ def info_submit(
     reg = registration_for(user)
     if reg and reg["status"] != "pending":
         return flash_response("/student/dashboard", "attendance_locked")
+    code = (phone_country_code or "").strip() or "+91"
+    local = (phone or "").strip()
+    phone_full = f"{code} {local}".strip()
     data = {
-        "full_name": full_name, "phone": phone,
+        "full_name": full_name, "phone": phone_full,
+        "phone_country_code": code, "phone_number": local,
         "participation_mode": participation_mode,
         "participant_category": participant_category,
         "student_level": student_level, "ug_program": ug_program,
@@ -370,8 +388,6 @@ def _r2_access_err(sub: dict) -> str | None:
         return "round2_closed"
     if sub["r1_status"] != "r1_selected":
         return "round2_not_ready"
-    if not sub.get("format"):
-        return "round2_not_ready"
     if sub.get("r2_status") in ("r2_under_review", "selected", "not_selected"):
         return "content_locked"
     return None
@@ -388,11 +404,12 @@ def round2_choice(request: Request, sid: str, user: dict = Depends(require_role(
         return flash_response(f"/student/submission/{sid}", "round2_closed")
     if sub["r1_status"] != "r1_selected":
         return flash_response(f"/student/submission/{sid}", "round2_not_ready")
-    if sub.get("format"):
-        target = "content" if sub["format"] == "poster" else "upload"
+    # The format is only fixed once content is submitted; until then let the student re-choose.
+    if sub.get("r2_status"):
+        target = "content" if sub.get("format") == "poster" else "upload"
         return RedirectResponse(f"/student/submission/{sid}/round2/{target}", status_code=303)
     return render(request, "student/round2_choice.html", user=user, sub=round1_view(sub),
-                  values={"format": sub.get("format") or ""}, errors=None, students=students_map())
+                  values={"format": ""}, errors=None, students=students_map())
 
 
 @router.post("/submission/{sid}/round2")
@@ -409,15 +426,17 @@ def round2_choose(
         return flash_response(f"/student/submission/{sid}", "round1_results_not_declared")
     if not site_flag("round2_open"):
         return flash_response(f"/student/submission/{sid}", "round2_closed")
+    if sub["r1_status"] != "r1_selected":
+        return flash_response(f"/student/submission/{sid}", "round2_not_ready")
+    if sub.get("r2_status"):
+        return flash_response(f"/student/submission/{sid}", "content_locked")
     form, errors = validate(FormatChoiceForm, {"format": format})
     if errors:
         return render(request, "student/round2_choice.html", user=user, sub=round1_view(sub),
                       values={"format": format}, errors=errors, students=students_map())
-    _, err = choose_format(user, sid, form.format)
-    if err:
-        return flash_response(f"/student/submission/{sid}/round2", err)
+    # Nothing is saved yet — the format is committed when content is submitted.
     target = "content" if form.format == "poster" else "upload"
-    return flash_response(f"/student/submission/{sid}/round2/{target}", "format_chosen")
+    return RedirectResponse(f"/student/submission/{sid}/round2/{target}", status_code=303)
 
 
 # ----- poster: revised title + abstract -----
@@ -427,18 +446,32 @@ def round2_content_form(request: Request, sid: str, user: dict = Depends(require
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if (sub.get("format") or "") != "poster":
-        return flash_response(f"/student/submission/{sid}", "bad_format")
+    if sub.get("r2_status") and sub.get("format") == "ppt":
+        return RedirectResponse(f"/student/submission/{sid}/round2/upload", status_code=303)
     err = _r2_access_err(sub)
     if err:
         return flash_response(f"/student/submission/{sid}", err)
     return render(request, "student/round2_content.html", user=user, sub=round2_view(sub),
-                  values={"title": sub.get("title_r2") or "", "description": sub.get("description_r2") or ""},
+                  chosen_format="poster",
+                  values={"title": sub.get("title_r2") or "", "description": sub.get("description_r2") or "",
+                          "authors": sub.get("selection_round_authors") or []},
                   errors=None, students=students_map())
 
 
+def _authors_from_form(form_data) -> list[dict]:
+    """Zip repeated author_* fields from a Starlette FormData into row dicts."""
+    names = form_data.getlist("author_name")
+    designations = form_data.getlist("author_designation")
+    affiliations = form_data.getlist("author_affiliation")
+    emails = form_data.getlist("author_email")
+    return [
+        {"name": n, "designation": d, "affiliation": a, "email": e}
+        for n, d, a, e in zip(names, designations, affiliations, emails)
+    ]
+
+
 @router.post("/submission/{sid}/round2/content")
-def round2_content_submit(
+async def round2_content_submit(
     request: Request,
     sid: str,
     user: dict = Depends(require_role("student")),
@@ -448,16 +481,19 @@ def round2_content_submit(
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if (sub.get("format") or "") != "poster":
+    if sub.get("r2_status") and sub.get("format") == "ppt":
         return flash_response(f"/student/submission/{sid}", "bad_format")
     err = _r2_access_err(sub)
     if err:
         return flash_response(f"/student/submission/{sid}", err)
-    form, errors = validate(RoundTwoForm, {"title": title, "description": description})
+    form_data = await request.form()
+    authors = _authors_from_form(form_data)
+    data = {"title": title, "description": description, "authors": authors}
+    form, errors = validate(RoundTwoForm, data)
     if errors:
         return render(request, "student/round2_content.html", user=user, sub=round2_view(sub),
-                      values={"title": title, "description": description}, errors=errors, students=students_map())
-    _, e = submit_round2_content(user, sid, form.title, form.description)
+                      chosen_format="poster", values=data, errors=errors, students=students_map())
+    _, e = submit_round2_content(user, sid, form.title, form.description, form.authors)
     if e:
         return flash_response(f"/student/submission/{sid}", e)
     return flash_response(f"/student/submission/{sid}", "r2_content_saved")
@@ -470,13 +506,13 @@ def round2_upload_form(request: Request, sid: str, user: dict = Depends(require_
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if (sub.get("format") or "") != "ppt":
-        return flash_response(f"/student/submission/{sid}", "bad_format")
+    if sub.get("r2_status") and sub.get("format") == "poster":
+        return RedirectResponse(f"/student/submission/{sid}/round2/content", status_code=303)
     err = _r2_access_err(sub)
     if err:
         return flash_response(f"/student/submission/{sid}", err)
     return render(request, "student/round2_upload.html", user=user, sub=round2_view(sub),
-                  errors=None, students=students_map())
+                  chosen_format="ppt", errors=None, students=students_map())
 
 
 @router.post("/submission/{sid}/round2/upload")
@@ -489,7 +525,7 @@ async def round2_upload_submit(
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if (sub.get("format") or "") != "ppt":
+    if sub.get("r2_status") and sub.get("format") == "poster":
         return flash_response(f"/student/submission/{sid}", "bad_format")
     err = _r2_access_err(sub)
     if err:

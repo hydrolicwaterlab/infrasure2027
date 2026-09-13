@@ -229,11 +229,11 @@ SITE_CONFIG = {
     ],
 
     "submit_rules": [
-        "Submit Round 1 with a title and abstract only",
+        "Submit to the Abstract Round with a title and abstract only",
         "Up to 2 submissions per student — any combination of PPT and Poster",
         "Pick any of the 9 themes — it's your choice",
-        "Each submission is judged Round 1 (Selected for Round 2 / Not Selected), then you choose PPT or Poster",
-        "Round 2: Poster teams submit a revised title and abstract; PPT teams upload a PDF of their work",
+        "Each submission is judged in the Abstract Round (Selected for the Selection Round / Not Selected), then you choose PPT or Poster",
+        "Selection Round: Poster teams submit a revised title and abstract; PPT teams upload a PDF of their work",
         "A final decision — Selected or Not Selected — ends the review process for that submission",
     ],
     "max_pdf_mb": 25,

@@ -12,29 +12,38 @@
   {{ ns.name }}
 {%- endmacro %}
 
-{% macro status_badge(status) -%}
-  {%- set map = {"r1_pending": ("Pending review", "pending"),
-                 "r1_under_review": ("Under review", "under_review"),
-                 "r1_selected": ("Selected for Round 2", "selected"),
-                 "r1_not_selected": ("Not selected", "not_selected"),
-                 "r1_awaiting": ("Result to be announced", "awaiting"),
-                 "r2_pending": ("Round 2 pending review", "pending"),
-                 "r2_under_review": ("Round 2 under review", "under_review"),
-                 "r2_awaiting": ("Result to be announced", "awaiting"),
-                 "selected": ("Selected", "selected"),
-                 "not_selected": ("Not selected", "not_selected"),
-                 "approved": ("Approved", "approved"),
-                 "rejected": ("Rejected", "rejected")} -%}
-  {%- set row = map.get(status) or (status, status) -%}
-  <span class="badge badge-{{ row[1] }}">{{ row[0] }}</span>
+{% macro status_badge(status, compact=False) -%}
+  {%- set map = {"r1_pending": ("Pending review", "Pending", "pending"),
+                 "r1_under_review": ("Under review", "Under review", "under_review"),
+                 "r1_selected": ("Selected for the Selection Round", "Selected", "selected"),
+                 "r1_not_selected": ("Not selected", "Not selected", "not_selected"),
+                 "r1_awaiting": ("Result to be announced", "Awaiting result", "awaiting"),
+                 "r2_pending": ("Selection Round pending review", "Pending", "pending"),
+                 "r2_under_review": ("Selection Round under review", "Under review", "under_review"),
+                 "r2_awaiting": ("Result to be announced", "Awaiting result", "awaiting"),
+                 "selected": ("Selected", "Selected", "selected"),
+                 "not_selected": ("Not selected", "Not selected", "not_selected"),
+                 "approved": ("Approved", "Approved", "approved"),
+                 "rejected": ("Rejected", "Rejected", "rejected")} -%}
+  {%- set row = map.get(status) or (status, status, status) -%}
+  <span class="badge badge-{{ row[2] }}">{{ row[1] if compact else row[0] }}</span>
 {%- endmacro %}
 
 {% macro round_badge(round_no) -%}
-  <span class="badge badge-round-{{ round_no }}">Round {{ round_no }}</span>
+  <span class="badge badge-round-{{ round_no }}">{{ "Abstract Round" if round_no == 1 else "Selection Round" }}</span>
+{%- endmacro %}
+
+{% macro round_tabs(base_url, selected_round=1, extra_query="") -%}
+  <div class="round-tabs" role="tablist" aria-label="Submission round">
+    {% for r, label in [(1, "Abstract Round"), (2, "Selection Round")] %}
+      <a role="tab" class="round-tab {{ 'is-active' if (selected_round or 1) == r }}"
+         href="{{ base_url }}?round={{ r }}{{ extra_query }}">{{ label }}</a>
+    {% endfor %}
+  </div>
 {%- endmacro %}
 
 {% macro pdf_badge() -%}
-  <span class="badge badge-type" title="PDF uploaded for Round 2">PDF</span>
+  <span class="badge badge-type" title="PDF uploaded for the Selection Round">PDF</span>
 {%- endmacro %}
 
 {% macro type_badge(fmt) -%}
@@ -65,16 +74,20 @@
   </div>
 {%- endmacro %}
 
-{% macro filter_form(base_url, themes, selected_theme="", selected_status="", selected_type="", selected_round=1, selected_q="") -%}
+{% macro filter_form(base_url, themes, selected_theme="", selected_status="", selected_type="", selected_round=1, selected_q="", show_round=True) -%}
   <form method="get" action="{{ base_url }}" class="filter-bar">
+    {% if show_round %}
     <label class="field f-inline">
       <span>Round</span>
       <select name="round">
-        {% for r, label in [(1, "Round 1"), (2, "Round 2")] %}
+        {% for r, label in [(1, "Abstract Round"), (2, "Selection Round")] %}
           <option value="{{ r }}" {% if (selected_round or 1) == r %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </label>
+    {% else %}
+    <input type="hidden" name="round" value="{{ selected_round or 1 }}" />
+    {% endif %}
     <label class="field f-inline">
       <span>Theme</span>
       <select name="theme">
@@ -89,13 +102,13 @@
       <select name="status">
         <option value="">All</option>
         {% if (selected_round or 1) == 2 %}
-          {% for key, label in [("r2_pending", "Round 2 pending review"), ("r2_under_review", "Round 2 under review"),
+          {% for key, label in [("r2_pending", "Selection Round pending review"), ("r2_under_review", "Selection Round under review"),
                                   ("selected", "Selected"), ("not_selected", "Not selected")] %}
             <option value="{{ key }}" {% if selected_status == key %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         {% else %}
           {% for key, label in [("r1_pending", "Pending review"), ("r1_under_review", "Under review"),
-                                  ("r1_selected", "Selected for Round 2"), ("r1_not_selected", "Not selected")] %}
+                                  ("r1_selected", "Selected for the Selection Round"), ("r1_not_selected", "Not selected")] %}
             <option value="{{ key }}" {% if selected_status == key %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         {% endif %}
@@ -130,31 +143,33 @@
   </form>
 {%- endmacro %}
 
-{% macro subs_table(subs, themes, empty_title, empty_text, empty_href=None, empty_cta=None, view_prefix="", round_no=1) -%}
+{% macro subs_table(subs, themes, empty_title, empty_text, empty_href=None, empty_cta=None, view_prefix="", round_no=1, show_title=True) -%}
   {% if subs %}
     <div class="table-wrap">
       <table class="data-table">
         <thead>
           <tr>
-            <th>Format</th><th>Theme</th><th>Student</th><th>Title</th><th>Reviewer</th><th>Status</th><th>Submitted</th><th class="th-actions"></th>
+            <th>Format</th><th>Theme</th><th>Student</th>{% if show_title %}<th>Title</th>{% endif %}<th>Reviewer</th><th>Status</th><th>Submitted</th><th class="th-actions"></th>
           </tr>
         </thead>
         <tbody>
           {% for s in subs %}
             <tr>
-              <td>{{ type_badge(s.format) }}<div class="round-tag">{{ round_badge(round_no) }}</div></td>
+              <td>{{ type_badge(s.format) }}</td>
               <td><span class="theme-label">{{ s.theme }}</span><small class="cell-sub">{{ theme_name(s.theme, themes) }}</small></td>
               <td>{{ s._student }}</td>
+              {% if show_title %}
               <td>
                 {% if view_prefix %}
-                  <a class="cell-title cell-title-link" href="{{ view_prefix }}/{{ s.id }}{% if round_no == 2 %}?round=2{% endif %}">{{ s.title }}</a>
+                  <a class="cell-title cell-title-link" href="{{ view_prefix }}/{{ s.id }}{% if round_no == 2 or s.r2_status %}?round=2{% endif %}">{{ s.title }}</a>
                 {% else %}
                   <span class="cell-title">{{ s.title }}</span>
                 {% endif %}
                 <small class="cell-sub">{{ s.description | truncate(110) }}</small>
               </td>
+              {% endif %}
               <td>{{ s._reviewer or "—" }}{% if round_no == 2 and s.has_pdf %} {{ pdf_badge() }}{% endif %}</td>
-              <td>{% if round_no == 2 %}{{ status_badge(s.r2_status) }}{% else %}{{ status_badge(s.r1_status) }}{% endif %}</td>
+              <td>{% if round_no == 2 %}{{ status_badge(s.r2_status, compact=True) }}{% else %}{{ status_badge(s.r1_status, compact=True) }}{% endif %}</td>
               <td>{{ (s.created_at or "")[:10] }}</td>
               <td class="cell-actions">
                 {% for a in s._actions %}
@@ -171,6 +186,24 @@
   {% endif %}
 {%- endmacro %}
 
+{% macro author_list(authors) -%}
+  {% if authors %}
+    <div class="author-block">
+      <h4 class="review-head">Authors</h4>
+      <ul class="author-list">
+        {% for a in authors %}
+          <li>
+            <span class="author-name">{{ a.name }}</span>
+            {% if a.designation %}<span class="author-meta">{{ a.designation }}</span>{% endif %}
+            {% if a.affiliation %}<span class="author-meta">{{ a.affiliation }}</span>{% endif %}
+            {% if a.email %}<span class="author-meta">{{ a.email }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{%- endmacro %}
+
 {% macro submission_detail(sub, students, themes) -%}
   <div class="review-meta">
     {{ type_badge(sub.format) }}
@@ -181,31 +214,32 @@
     <dt>Student</dt><dd>{{ (students.get(sub.user_id) or {}).get("name", "—") or "—" }}</dd>
     <dt>Email</dt><dd>{{ (students.get(sub.user_id) or {}).get("email", "—") or "—" }}</dd>
     <dt>Submitted</dt><dd>{{ (sub.created_at or "")[:10] }}</dd>
-    <dt>Round 1</dt>
+    <dt>Abstract Round</dt>
     <dd>{{ status_badge(sub.r1_status) }}{% if sub.r1_reviewed_at %} · {{ (students.get(sub.r1_reviewed_by) or {}).get("name", "—") or "—" }} · {{ sub.r1_reviewed_at[:10] }}{% endif %}</dd>
   </dl>
 
-  <h3 class="review-head">Round 1 — abstract</h3>
+  <h3 class="review-head">Abstract Round</h3>
   <p class="review-abstract">{{ sub.description_r1 or sub.description }}</p>
 
   {% if sub.r2_status %}
-    <h3 class="review-head">Round 2 — content</h3>
+    <h3 class="review-head">Selection Round — content</h3>
     {% if sub.format == "poster" %}
       <p class="review-abstract">{{ sub.description_r2 or "" }}</p>
+      {{ author_list(sub.selection_round_authors) }}
     {% elif sub.has_pdf %}
       <p class="side-note">PDF uploaded — {{ sub.pdf_name }}{% if sub.pdf_size %} · {{ (sub.pdf_size / 1048576) | round(2) }} MB{% endif %}
         <a class="btn btn-sm btn-outline" href="/pdf/{{ sub.id }}" target="_blank">Open PDF</a></p>
     {% else %}
-      <p class="side-note">Round 2 content not submitted yet.</p>
+      <p class="side-note">Selection Round content not submitted yet.</p>
     {% endif %}
     <dl class="reg-dl">
-      <dt>Round 2</dt>
+      <dt>Selection Round</dt>
       <dd>{{ status_badge(sub.r2_status) }}{% if sub.r2_reviewed_at %} · {{ (students.get(sub.r2_reviewed_by) or {}).get("name", "—") or "—" }} · {{ sub.r2_reviewed_at[:10] }}{% endif %}</dd>
     </dl>
     {% if sub.r2_reviewer_id %}
       <div class="sub-review">
         <p class="sub-review-label">
-          Round 2 reviewer — {{ (students.get(sub.r2_reviewer_id) or {}).get("name", "—") or "—" }}
+          Selection Round reviewer — {{ (students.get(sub.r2_reviewer_id) or {}).get("name", "—") or "—" }}
           {% if sub.r2_reviewed_at %}
             <span class="badge badge-selected">Decision sent · {{ sub.r2_reviewed_at[:10] }}</span>
           {% else %}
@@ -214,8 +248,6 @@
         </p>
         {% if sub.r2_comment %}
           <p class="review-quote">“{{ sub.r2_comment }}”</p>
-        {% else %}
-          <p class="side-note">No feedback yet.</p>
         {% endif %}
       </div>
     {% endif %}
@@ -224,7 +256,7 @@
   {% if sub.r1_reviewer_id %}
     <div class="sub-review">
       <p class="sub-review-label">
-        Round 1 reviewer — {{ (students.get(sub.r1_reviewer_id) or {}).get("name", "—") or "—" }}
+        Abstract Round reviewer — {{ (students.get(sub.r1_reviewer_id) or {}).get("name", "—") or "—" }}
         {% if sub.r1_reviewed_at %}
           <span class="badge badge-selected">Decision sent · {{ sub.r1_reviewed_at[:10] }}</span>
         {% else %}
@@ -238,7 +270,7 @@
       {% endif %}
     </div>
   {% else %}
-    <p class="side-note">No Round 1 reviewer assigned yet.</p>
+    <p class="side-note">No Abstract Round reviewer assigned yet.</p>
   {% endif %}
 {%- endmacro %}
 

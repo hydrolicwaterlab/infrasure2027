@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui with context %}
-{% block title %}Round 2 review — {{ config.name }}{% endblock %}
+{% block title %}Selection Round review — {{ config.name }}{% endblock %}
 {% block content %}
 
 <section class="page-head page-head-compact">
   <div class="container">
-    <p class="eyebrow eyebrow-on-dark">Reviewer · Round 2</p>
+    <p class="eyebrow eyebrow-on-dark">Reviewer · Selection Round</p>
     <h1 class="display display-on-dark">{{ sub.title }}</h1>
-    <p class="page-head-sub">Decide the final outcome — Selected, or Not Selected. Your feedback is shown to the student.</p>
+    <p class="page-head-sub">Confirm the final outcome — Selected, or Not Selected.</p>
   </div>
 </section>
 
@@ -26,26 +26,27 @@
         <dt>Submitted</dt><dd>{{ (sub.created_at or "")[:10] }}</dd>
       </dl>
 
-      <h3 class="review-head">Round 1 — abstract</h3>
+      <h3 class="review-head">Abstract Round</h3>
       <p class="review-abstract">{{ sub.description_r1 or sub.description }}</p>
 
       {% if sub.r1_comment %}
         <div class="sub-review">
-          <p class="sub-review-label">Round 1 decision — {{ ui.status_badge(sub.r1_status) }}</p>
+          <p class="sub-review-label">Abstract Round decision — {{ ui.status_badge(sub.r1_status) }}</p>
           <p class="review-quote">“{{ sub.r1_comment }}”</p>
         </div>
       {% endif %}
 
-      <h3 class="review-head">Round 2 — content</h3>
+      <h3 class="review-head">Selection Round — content</h3>
       {% if sub.format == "poster" %}
         <p class="review-abstract">{{ sub.description_r2 or "" }}</p>
+        {{ ui.author_list(sub.selection_round_authors) }}
       {% elif sub.has_pdf %}
         <div class="pdf-viewer-wrap">
           <p class="sub-review-label">In-browser preview — {{ sub.pdf_name }}{% if sub.pdf_size %} · {{ (sub.pdf_size / 1048576) | round(2) }} MB{% endif %}</p>
           <iframe class="pdf-viewer" src="/pdf/{{ sub.id }}" title="{{ sub.pdf_name }}"></iframe>
         </div>
       {% else %}
-        <p class="side-note">Round 2 content not submitted yet.</p>
+        <p class="side-note">Selection Round content not submitted yet.</p>
       {% endif %}
     </div>
 
@@ -54,19 +55,17 @@
       <form method="post" action="/reviewer/review/{{ sub.id }}/round2" novalidate>
         {{ ui.csrf_field() }}
         <fieldset class="form-block">
-          <legend class="form-legend">Your decision</legend>
+          <legend class="form-legend">Confirm your decision</legend>
+          <p class="side-note">Confirm the final outcome for this submission — it is recorded immediately.</p>
           <div class="form-actions form-actions-stack">
-            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="selected">Selected</button>
+            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="selected"
+                    onclick="return confirm('Confirm: Selected for INFRASURE 2027?')">Selected</button>
             <button class="btn btn-danger btn-lg btn-block" type="submit" name="decision" value="not_selected"
                     onclick="return confirm('Not selected ends this submission. Continue?')">Not selected</button>
           </div>
         </fieldset>
-        <div class="field">
-          <label for="comment">Feedback (shown to the student)</label>
-          <textarea id="comment" name="comment" rows="8" maxlength="1000" placeholder="Why it moves forward, or how it could be improved…" required>{{ values.comment or "" }}</textarea>
-        </div>
         <div class="form-actions">
-          <a class="btn btn-ghost btn-lg" href="/reviewer/dashboard">Cancel</a>
+          <a class="btn btn-ghost btn-lg" href="/reviewer/dashboard?round=2">Cancel</a>
         </div>
       </form>
     </div>

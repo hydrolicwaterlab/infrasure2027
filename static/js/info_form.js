@@ -155,5 +155,14 @@
 
   form.addEventListener('change', update);
   form.addEventListener('input', update);
+  form.querySelectorAll('[data-digits-only]').forEach((inp) => {
+    const scrub = () => {
+      const cleaned = inp.value.replace(/[^0-9]/g, "");
+      if (cleaned !== inp.value) inp.value = cleaned;
+    };
+    inp.addEventListener('input', scrub);
+    inp.addEventListener('paste', () => setTimeout(scrub, 0));
+    scrub();
+  });
   update();
 })();

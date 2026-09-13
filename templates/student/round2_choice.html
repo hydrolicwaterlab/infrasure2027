@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui with context %}
-{% block title %}Choose your format — Round 2 — {{ config.name }}{% endblock %}
+{% block title %}Choose your format — Selection Round — {{ config.name }}{% endblock %}
 {% block content %}
 <section class="page-head page-head-compact">
   <div class="container">
-    <p class="eyebrow eyebrow-on-dark">Student portal · Round 2</p>
+    <p class="eyebrow eyebrow-on-dark">Participant portal · Selection Round</p>
     <h1 class="display display-on-dark">Choose your presentation format.</h1>
-    <p class="page-head-sub">Round 1 was selected for Round 2. Now decide how you want to present — PPT or Poster.</p>
+    <p class="page-head-sub">Abstract Round was selected for the Selection Round. Now decide how you want to present — PPT or Poster.</p>
   </div>
 </section>
 
@@ -15,9 +15,9 @@
     {% include "_form_errors.html" %}
 
     <div class="panel form-card">
-      <h2 class="panel-title">Round 1 decision</h2>
+      <h2 class="panel-title">Abstract Round decision</h2>
       <dl class="reg-dl">
-        <dt>Your presentation</dt><dd>{{ ui.type_badge(sub.format) }} · {{ sub.theme }} · {{ ui.status_badge(sub.r1_status) }}</dd>
+        <dt>Your presentation</dt><dd>{{ sub.theme }} · {{ ui.status_badge(sub.r1_status) }}</dd>
         {% if sub.r1_reviewer_id %}
           <dt>Reviewed by</dt><dd>{{ (students.get(sub.r1_reviewer_id) or {}).get("name", "—") or "—" }}{% if sub.r1_reviewed_at %} · {{ sub.r1_reviewed_at[:10] }}{% endif %}</dd>
         {% endif %}
@@ -44,10 +44,11 @@
           </label>
         </div>
         <p class="field-hint">Each submission is independent — you can choose PPT for one submission and Poster for another.</p>
+        <p class="field-hint">You can change your mind until you submit your work — once the Selection Round content is submitted, the format is locked.</p>
       </fieldset>
 
       <div class="form-actions">
-        <button class="btn btn-primary btn-lg" type="submit">Save format</button>
+        <button class="btn btn-primary btn-lg" type="submit">Continue</button>
         <a class="btn btn-ghost btn-lg" href="/student/submission/{{ sub.id }}">Cancel</a>
       </div>
     </form>

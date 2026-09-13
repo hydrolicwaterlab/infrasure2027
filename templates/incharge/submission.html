@@ -24,11 +24,17 @@
 
     <div class="panel form-card review-form">
       <h2 class="panel-title">Actions</h2>
+      {% if sub.r2_status %}
+        <div class="round-tabs round-tabs-sm" role="tablist" aria-label="Submission round">
+          <a role="tab" class="round-tab {{ 'is-active' if round_no == 1 }}" href="/incharge/submission/{{ sub.id }}?round=1">Abstract Round</a>
+          <a role="tab" class="round-tab {{ 'is-active' if round_no == 2 }}" href="/incharge/submission/{{ sub.id }}?round=2">Selection Round</a>
+        </div>
+      {% endif %}
       {% if round_no == 2 %}
         {% if sub.r2_status == "r2_pending" %}
-          <p class="side-note">Round 2 content received — no reviewer yet. Assign one, or decide it yourself.</p>
+          <p class="side-note">Selection Round content received — no reviewer yet. Assign one, or decide it yourself.</p>
         {% elif sub.r2_status == "r2_under_review" %}
-          <p class="side-note">The Round 2 reviewer is working on this submission. You can change the reviewer or take over.</p>
+          <p class="side-note">The Selection Round reviewer is working on this submission. You can change the reviewer or take over.</p>
         {% elif sub.r2_status == "selected" %}
           <p class="side-note">Final decision: Selected — the presentation is confirmed for INFRASURE 2027.</p>
         {% elif sub.r2_status == "not_selected" %}
@@ -36,13 +42,13 @@
         {% endif %}
       {% else %}
         {% if sub.r1_status == "r1_pending" %}
-          <p class="side-note">Round 1 — no reviewer yet. Assign one, or review it yourself.</p>
+          <p class="side-note">Abstract Round — no reviewer yet. Assign one, or review it yourself.</p>
         {% elif sub.r1_status == "r1_under_review" %}
-          <p class="side-note">The reviewer is working on Round 1. You can change the reviewer or take over.</p>
+          <p class="side-note">The reviewer is working on the Abstract Round. You can change the reviewer or take over.</p>
         {% elif sub.r1_status == "r1_selected" %}
-          <p class="side-note">Selected for Round 2 — the student chooses their format{% if sub.format %}: {{ "PPT" if sub.format == "ppt" else "Poster" }}{% endif %}.{% if not sub.r2_status %} Round 2 content is pending.{% endif %}</p>
+          <p class="side-note">Selected for the Selection Round — the student chooses their format{% if sub.format %}: {{ "PPT" if sub.format == "ppt" else "Poster" }}{% endif %}.{% if not sub.r2_status %} Selection Round content is pending.{% endif %}</p>
         {% elif sub.r1_status == "r1_not_selected" %}
-          <p class="side-note">Not selected — this submission ends at Round 1.</p>
+          <p class="side-note">Not selected — this submission ends at the Abstract Round.</p>
         {% endif %}
       {% endif %}
       {% for a in actions %}

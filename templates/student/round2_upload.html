@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui with context %}
-{% block title %}Upload Round 2 PDF — {{ config.name }}{% endblock %}
+{% block title %}Upload Selection Round PDF — {{ config.name }}{% endblock %}
 {% block content %}
 <section class="page-head page-head-compact">
   <div class="container">
-    <p class="eyebrow eyebrow-on-dark">Student portal · Round 2 · PPT</p>
-    <h1 class="display display-on-dark">Upload your Round 2 work.</h1>
-    <p class="page-head-sub">Submit a single PDF of your PPT presentation or extended abstract. It is shown to the reviewer in the browser.</p>
+    <p class="eyebrow eyebrow-on-dark">Participant portal · Selection Round · Full Paper / Extended Abstract</p>
+    <h1 class="display display-on-dark">Submit your full paper or extended abstract.</h1>
+    <p class="page-head-sub">Upload a single PDF of your full paper or extended abstract, prepared using the official template. It is shown to the reviewer in the browser. Once you submit, your format (PPT) and file are locked.</p>
   </div>
 </section>
 
@@ -15,9 +15,9 @@
     {% include "_form_errors.html" %}
 
     <div class="panel form-card">
-      <h2 class="panel-title">Feedback on your Round 1</h2>
+      <h2 class="panel-title">Feedback on your Abstract Round</h2>
       <dl class="reg-dl">
-        <dt>Your presentation</dt><dd>{{ ui.type_badge(sub.format) }} · {{ sub.theme }} · {{ ui.status_badge(sub.r1_status) }}</dd>
+        <dt>Your presentation</dt><dd>{{ ui.type_badge(chosen_format) }} · {{ sub.theme }} · {{ ui.status_badge(sub.r1_status) }}</dd>
         {% if sub.r1_reviewer_id %}
           <dt>Reviewed by</dt><dd>{{ (students.get(sub.r1_reviewer_id) or {}).get("name", "—") or "—" }}{% if sub.r1_reviewed_at %} · {{ sub.r1_reviewed_at[:10] }}{% endif %}</dd>
         {% endif %}
@@ -43,6 +43,15 @@
       </div>
     {% endif %}
 
+    <div class="panel form-card">
+      <h2 class="panel-title">Official templates</h2>
+      <p class="side-note">Download the official template, prepare your full paper or extended abstract, then export it as a single PDF to upload below.</p>
+      <p class="template-links">
+        <a class="btn btn-sm btn-outline" href="/media/INFRASURE2027_Extended Abstract_Template.pdf" download>Extended Abstract Template (PDF)</a>
+        <a class="btn btn-sm btn-outline" href="/media/INFRASURE2027_Full Length_Template.docx" download>Full Length Paper Template (DOCX)</a>
+      </p>
+    </div>
+
     <form method="post" class="panel form-card" action="/student/submission/{{ sub.id }}/round2/upload"
           enctype="multipart/form-data" novalidate>
       {{ ui.csrf_field() }}
@@ -51,7 +60,7 @@
         <div class="field">
           <label for="file">PDF file (max {{ config.max_pdf_mb }} MB)</label>
           <input type="file" id="file" name="file" accept="application/pdf" required />
-          <p class="field-hint">Only PDF files are accepted. You can replace it while Round 2 is still pending review.</p>
+          <p class="field-hint">Only PDF files are accepted. Prepare your full paper or extended abstract using the official template above. You can replace the file while Selection Round is pending review, but the format stays PPT.</p>
         </div>
       </fieldset>
 

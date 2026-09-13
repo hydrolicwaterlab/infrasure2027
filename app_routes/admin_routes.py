@@ -30,6 +30,7 @@ from app_routes.service import (
     set_reviewer_themes,
     set_site_flag,
     site_state,
+    split_round_stages,
     students_map,
     submission_actions,
     toggle_announcement,
@@ -147,18 +148,17 @@ def submissions(
         q_clean = q.strip().lower()
         smap = students_map()
         subs = [s for s in subs if q_clean in (smap.get(s.get("user_id"), {}).get("email") or "").lower()]
-    subs = decorated_subs(
-        subs,
-        students_map(),
-        _submit_actions(round_no),
-        round_no,
-    )
+    pending_subs, done_subs = split_round_stages(subs, round_no)
+    pending_subs = decorated_subs(pending_subs, students_map(), _submit_actions(round_no), round_no)
+    done_subs = decorated_subs(done_subs, students_map(), _submit_actions(round_no), round_no)
     return render_msg(
         request,
         "admin/submissions.html",
         msg=request.query_params.get("msg"),
         user=user,
-        subs=subs,
+        subs=pending_subs + done_subs,
+        pending_subs=pending_subs,
+        done_subs=done_subs,
         themes=SITE_CONFIG["themes"],
         filters={"theme": theme, "status": status, "type": type, "round": round_no, "q": q},
         q=q,
