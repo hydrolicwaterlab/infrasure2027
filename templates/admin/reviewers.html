@@ -25,9 +25,9 @@
         <div class="field"><label for="password">Temporary password</label><input type="password" id="password" name="password" minlength="8" required /></div>
         <fieldset class="field checkbox-field">
           <legend>Assign themes</legend>
-          <div class="check-grid">
+          <div class="check-grid check-grid-3">
             {% for t in themes %}
-              <label class="check"><input type="checkbox" name="themes" value="{{ t.label }}" {% if t.label in (values.themes or []) %}checked{% endif %} /> <span>{{ t.label }}</span></label>
+              <label class="check"><input type="checkbox" name="themes" value="{{ t.label }}" {% if t.label in (values.themes or []) %}checked{% endif %} /> <span>{{ t.label }} — {{ t.name }}</span></label>
             {% endfor %}
           </div>
         </fieldset>

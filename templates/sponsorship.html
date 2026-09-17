@@ -87,7 +87,15 @@
         <p>{{ config.sponsorship_benefits.note }}</p>
         <p>Contact us at <a href="mailto:{{ config.sponsorship_benefits.contact_email }}">{{ config.sponsorship_benefits.contact_email }}</a> for more information.</p>
         <div class="sponsor-cta-actions">
-          <a class="btn btn-outline" href="/media/INFRASURE2027_broucher.pdf" download>Download Brochure</a>
+          <div class="nav-dropdown nav-dropdown--right">
+            <button type="button" class="btn btn-outline nav-dropdown-toggle" aria-expanded="false">
+              Download <span class="nav-caret" aria-hidden="true"></span>
+            </button>
+            <div class="nav-dropdown-menu">
+              <a href="/media/INFRASURE2027_broucher.pdf" download>Brochure</a>
+              <a href="/media/INFRASURE2027_flyer.pdf" download>Flyer</a>
+            </div>
+          </div>
         </div>
       </div>
     </div>

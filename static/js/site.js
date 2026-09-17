@@ -41,6 +41,43 @@
     });
   }
 
+  // Brochure dropdowns (hover handled in CSS; click/keyboard here)
+  const dropdowns = document.querySelectorAll(".nav-dropdown, .mobile-dropdown");
+  if (dropdowns.length) {
+    const closeDropdown = (wrap) => {
+      wrap.classList.remove("is-open");
+      const btn = wrap.querySelector(".nav-dropdown-toggle, .mobile-dropdown-toggle");
+      if (btn) btn.setAttribute("aria-expanded", "false");
+    };
+    const closeAll = (except) => {
+      dropdowns.forEach((wrap) => {
+        if (wrap !== except) closeDropdown(wrap);
+      });
+    };
+    dropdowns.forEach((wrap) => {
+      const btn = wrap.querySelector(".nav-dropdown-toggle, .mobile-dropdown-toggle");
+      if (!btn) return;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const open = !wrap.classList.contains("is-open");
+        closeAll(wrap);
+        wrap.classList.toggle("is-open", open);
+        btn.setAttribute("aria-expanded", String(open));
+        if (!open) {
+          const focused = wrap.querySelector(":focus");
+          if (focused) focused.blur();
+        }
+      });
+    });
+    document.addEventListener("click", () => closeAll(null));
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      closeAll(null);
+      const active = document.activeElement;
+      if (active && active.closest(".nav-dropdown, .mobile-dropdown")) active.blur();
+    });
+  }
+
   // Policies page — highlight currently visible section in the "On this page" list
   const toc = document.querySelector(".policy-toc");
   if (toc) {

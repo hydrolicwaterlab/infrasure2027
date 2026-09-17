@@ -34,7 +34,15 @@
         <a href="/#cfp">Timeline</a>
         <a href="/#committee">Committee</a>
         <a href="/sponsorship"{% if request.url.path == "/sponsorship" %} class="is-active" aria-current="page"{% endif %}>Sponsorship</a>
-        <a href="/media/INFRASURE2027_broucher.pdf" download>Brochure</a>
+        <div class="nav-dropdown">
+          <button type="button" class="nav-dropdown-toggle" aria-expanded="false">
+            Brochure <span class="nav-caret" aria-hidden="true"></span>
+          </button>
+          <div class="nav-dropdown-menu">
+            <a href="/media/INFRASURE2027_broucher.pdf" download>Brochure</a>
+            <a href="/media/INFRASURE2027_flyer.pdf" download>Flyer</a>
+          </div>
+        </div>
         <a href="/#updates">Updates</a>
         <a href="/policies"{% if request.url.path == "/policies" %} class="is-active" aria-current="page"{% endif %}>Policies</a>
       </nav>
@@ -87,7 +95,15 @@
         <a class="mobile-link" href="/sponsorship">Sponsorship</a>
         <a class="mobile-link" href="/#updates">Updates</a>
         <a class="mobile-link" href="/policies">Policies</a>
-        <a class="mobile-link" href="/media/INFRASURE2027_broucher.pdf" download>Brochure</a>
+        <div class="mobile-dropdown">
+          <button type="button" class="mobile-link mobile-dropdown-toggle" aria-expanded="false">
+            Brochure <span class="nav-caret" aria-hidden="true"></span>
+          </button>
+          <div class="mobile-dropdown-menu">
+            <a class="mobile-link" href="/media/INFRASURE2027_broucher.pdf" download>Brochure</a>
+            <a class="mobile-link" href="/media/INFRASURE2027_flyer.pdf" download>Flyer</a>
+          </div>
+        </div>
         <div class="mobile-actions">
           {% if current_user %}
             {% set role = current_user.role %}

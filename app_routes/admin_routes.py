@@ -21,6 +21,7 @@ from app_routes.service import (
     faqs_list,
     filter_submissions,
     find_user,
+    find_registration,
     delete_user_and_data,
     rename_category,
     reset_user_password,
@@ -182,6 +183,18 @@ def registration_set(request: Request, rid: str, user: dict = Depends(ADMIN), ac
     if err:
         return flash_response("/admin/registrations", err)
     return flash_response("/admin/registrations", "reg_updated")
+
+
+@router.post("/registrations/{rid}/delete")
+def registration_delete(request: Request, rid: str, user: dict = Depends(ADMIN)):
+    reg = find_registration(rid)
+    if not reg:
+        return flash_response("/admin/registrations", "registration_not_found")
+    uid = reg.get("user_id")
+    if not uid:
+        return flash_response("/admin/registrations", "user_not_found")
+    _, err = delete_user_and_data(uid, user)
+    return flash_response("/admin/registrations", err or "user_deleted")
 
 
 # ---------- users ----------
