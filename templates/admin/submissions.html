@@ -7,7 +7,7 @@
   <div class="container">
     <p class="eyebrow eyebrow-on-dark">Admin · Submissions</p>
     <h1 class="display display-on-dark">Every submission, one table.</h1>
-    <p class="page-head-sub">Papers awaiting feedback, awaiting a final decision, and decided.</p>
+    <p class="page-head-sub">Papers awaiting feedback, awaiting final submission, awaiting a final decision, and decided.</p>
   </div>
 </section>
 
@@ -16,9 +16,24 @@
     <div class="admin-top">
       {{ ui.admin_nav("submissions") }}
     </div>
-    {{ ui.filter_form("/admin/submissions", themes, filters.theme, filters.status, filters.type, filters.q) }}
+    {{ ui.filter_form("/admin/submissions", themes, filters.theme, filters.status, filters.type, filters.q, tab=active_tab) }}
 
-    <div class="panel">
+    {% set tabs = [("feedback", "Awaiting feedback", feedback_subs|length),
+                   ("round2", "Awaiting final submission", round2_subs|length),
+                   ("final", "Awaiting final decision", final_subs|length),
+                   ("decided", "Decided", done_subs|length)] %}
+    <div class="subnav tabs" role="tablist" aria-label="Submission stages" data-tabs>
+      {% for key, label, count in tabs %}
+        <button type="button" class="subnav-link {{ 'is-active' if active_tab == key }}" role="tab"
+                id="tab-{{ key }}" aria-controls="panel-{{ key }}"
+                aria-selected="{{ 'true' if active_tab == key else 'false' }}"
+                tabindex="{{ '0' if active_tab == key else '-1' }}" data-tab="{{ key }}">
+          {{ label }} <span class="tab-count">{{ count }}</span>
+        </button>
+      {% endfor %}
+    </div>
+
+    <div class="panel tab-panel" role="tabpanel" id="panel-feedback" aria-labelledby="tab-feedback"{% if active_tab != "feedback" %} hidden{% endif %}>
       <div class="panel-head">
         <h2 class="panel-title">Awaiting feedback{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
       </div>
@@ -29,18 +44,29 @@
           "/admin/submissions", "Show all", view_prefix="/incharge/submission", show_title=False) }}
     </div>
 
-    <div class="panel">
+    <div class="panel tab-panel" role="tabpanel" id="panel-round2" aria-labelledby="tab-round2"{% if active_tab != "round2" %} hidden{% endif %}>
+      <div class="panel-head">
+        <h2 class="panel-title">Awaiting final submission{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
+      </div>
+      {{ ui.subs_table(
+          round2_subs, themes,
+          "Nobody is mid-submission",
+          "Papers whose feedback has been released appear here until the participant submits the final version.",
+          "/admin/submissions", "Show all", view_prefix="/incharge/submission", show_title=False) }}
+    </div>
+
+    <div class="panel tab-panel" role="tabpanel" id="panel-final" aria-labelledby="tab-final"{% if active_tab != "final" %} hidden{% endif %}>
       <div class="panel-head">
         <h2 class="panel-title">Awaiting final decision{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
       </div>
       {{ ui.subs_table(
           final_subs, themes,
           "Nothing awaiting a final decision",
-          "Papers whose feedback has been released appear here.",
+          "Papers submitted for final review appear here.",
           "/admin/submissions", "Show all", view_prefix="/incharge/submission", show_title=False) }}
     </div>
 
-    <div class="panel">
+    <div class="panel tab-panel" role="tabpanel" id="panel-decided" aria-labelledby="tab-decided"{% if active_tab != "decided" %} hidden{% endif %}>
       <div class="panel-head">
         <h2 class="panel-title">Decided{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
       </div>
@@ -52,4 +78,9 @@
     </div>
   </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/tabs.js" defer></script>
+<noscript><style>[role="tabpanel"][hidden]{display:block !important;}</style></noscript>
 {% endblock %}

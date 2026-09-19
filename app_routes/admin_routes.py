@@ -141,6 +141,7 @@ def submissions(
     status: str = "",
     type: str = "",
     q: str = "",
+    tab: str = "",
 ):
     # base scoped + theme/status/type filter
     subs = filter_submissions(scoped_submissions(user), theme, status, type)
@@ -154,6 +155,7 @@ def submissions(
     round2_subs = decorated_subs(round2_subs, students_map(), _submit_actions())
     final_subs = decorated_subs(final_subs, students_map(), _submit_actions())
     done_subs = decorated_subs(done_subs, students_map(), _submit_actions())
+    active_tab = tab if tab in ("feedback", "round2", "final", "decided") else "feedback"
     return render_msg(
         request,
         "admin/submissions.html",
@@ -165,6 +167,7 @@ def submissions(
         done_subs=done_subs,
         themes=SITE_CONFIG["themes"],
         filters={"theme": theme, "status": status, "type": type, "q": q},
+        active_tab=active_tab,
         q=q,
     )
 
