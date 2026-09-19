@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Final submission — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Participant portal · Final Submission</p>
+    <h1 class="display display-on-dark">Submit for Final Review.</h1>
+    <p class="page-head-sub">Your paper was reviewed. Review the feedback, optionally upload a revised PDF and update the author list, then click Submit for Final Review — the title and paper type stay fixed.</p>
+  </div>
+</section>
+
+<section class="form-section form-section-top">
+  <div class="container container-form">
+    {% include "_form_errors.html" %}
+
+    <div class="panel form-card">
+      <h2 class="panel-title">Review feedback</h2>
+      <dl class="reg-dl">
+        <dt>Paper</dt><dd>{{ ui.paper_type_badge(sub.paper_type) }} · {{ sub.theme }} · {{ ui.status_badge(sub.status) }}</dd>
+        <dt>Title</dt><dd>{{ sub.title }}</dd>
+        {% if sub.feedback_by %}
+          <dt>Reviewed by</dt><dd>{{ (students.get(sub.feedback_by) or {}).get("name", "—") or "—" }}{% if sub.feedback_at %} · {{ sub.feedback_at[:10] }}{% endif %}</dd>
+        {% endif %}
+      </dl>
+      {% if sub.feedback %}
+        <div class="sub-review"><p class="review-quote">“{{ sub.feedback }}”</p></div>
+      {% else %}
+        <p class="side-note">No feedback left.</p>
+      {% endif %}
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="panel form-card"
+          action="/participant/round2/{{ sub.id }}" novalidate>
+      {{ ui.csrf_field() }}
+
+      <fieldset class="form-block">
+        <legend class="form-legend">1 · Title (fixed)</legend>
+        <div class="field">
+          <input type="text" value="{{ sub.title }}" readonly disabled />
+        </div>
+      </fieldset>
+
+      <fieldset class="form-block">
+        <legend class="form-legend">2 · Revised PDF (optional)</legend>
+        <div class="field">
+          <label for="file">Upload a new PDF</label>
+          <input type="file" id="file" name="file" accept="application/pdf,.pdf" />
+          <p class="field-hint">Leave blank to keep your current file (v{{ sub.version or 1 }}) — you can still update authors below.</p>
+          {% if sub.has_pdf %}
+            <p class="side-note">Current file: {{ sub.pdf_name }} · <a href="/pdf/{{ sub.id }}" target="_blank">Open PDF</a></p>
+          {% endif %}
+        </div>
+      </fieldset>
+
+      <fieldset class="form-block">
+        <legend class="form-legend">3 · Authors</legend>
+        <div id="authors-list" class="authors-list">
+          {% for a in (values.authors or [{}]) %}
+            <div class="author-row">
+              <div class="field">
+                <label>Author name</label>
+                <input type="text" name="author_name" maxlength="120" value="{{ a.name or '' }}" required />
+              </div>
+              <div class="field">
+                <label>Designation</label>
+                <input type="text" name="author_designation" maxlength="120" value="{{ a.designation or '' }}" required />
+              </div>
+              <div class="field">
+                <label>Affiliation</label>
+                <input type="text" name="author_affiliation" maxlength="200" value="{{ a.affiliation or '' }}" required />
+              </div>
+              <div class="field">
+                <label>Author email</label>
+                <input type="text" name="author_email" maxlength="200" value="{{ a.email or '' }}" required />
+              </div>
+              <button type="button" class="btn btn-sm btn-ghost author-remove" aria-label="Remove author">Remove</button>
+            </div>
+          {% endfor %}
+        </div>
+        <template id="author-row-template">
+          <div class="author-row">
+            <div class="field"><label>Author name</label><input type="text" name="author_name" maxlength="120" required /></div>
+            <div class="field"><label>Designation</label><input type="text" name="author_designation" maxlength="120" required /></div>
+            <div class="field"><label>Affiliation</label><input type="text" name="author_affiliation" maxlength="200" required /></div>
+            <div class="field"><label>Author email</label><input type="text" name="author_email" maxlength="200" required /></div>
+            <button type="button" class="btn btn-sm btn-ghost author-remove" aria-label="Remove author">Remove</button>
+          </div>
+        </template>
+        <button type="button" class="btn btn-sm btn-outline" id="author-add">+ Add author</button>
+      </fieldset>
+
+      <p class="field-hint">Once submitted, your final submission is locked and awaits the final decision.</p>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-lg" type="submit">Submit for Final Review</button>
+        <a class="btn btn-ghost btn-lg" href="/participant/submission/{{ sub.id }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/authors.js" defer></script>
+{% endblock %}

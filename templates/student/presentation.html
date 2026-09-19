@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Presentation choice — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Participant portal · Presentation</p>
+    <h1 class="display display-on-dark">Will you present?</h1>
+    <p class="page-head-sub">Your paper was selected. Tell us whether you will present it — the fee is charged per presentation you opt in to. The format was chosen when you submitted.</p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container container-narrow">
+    {% include "_form_errors.html" %}
+
+    <div class="panel form-card">
+      <dl class="reg-dl">
+        <dt>Paper</dt><dd>{{ ui.paper_type_badge(sub.paper_type) }} · {{ sub.theme }}</dd>
+        <dt>Title</dt><dd>{{ sub.title }}</dd>
+        <dt>Format</dt><dd>{{ ui.type_badge(sub.presentation_format) }}</dd>
+      </dl>
+
+      <form method="post" action="/participant/submission/{{ sub.id }}/present" novalidate>
+        {{ ui.csrf_field() }}
+
+        <fieldset class="form-block">
+          <legend class="form-legend">1 · Will you present this paper?</legend>
+          <label class="choice{% if values.presenting %} is-on{% endif %}">
+            <input type="checkbox" name="presenting" value="on" {% if values.presenting %}checked{% endif %} />
+            <span><strong>Yes, I will present this paper</strong><small>Untick to withdraw it from the programme (no fee for this paper).</small></span>
+          </label>
+        </fieldset>
+
+        <div class="form-actions">
+          <button class="btn btn-primary btn-lg" type="submit">Save choice</button>
+          <a class="btn btn-ghost btn-lg" href="/participant/submission/{{ sub.id }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

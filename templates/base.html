@@ -51,7 +51,7 @@
         {% if current_user %}
           {% set role = current_user.role %}
           {% if role == "student" %}
-            <a class="btn btn-sm btn-primary" href="/student/dashboard">Participant Dashboard</a>
+            <a class="btn btn-sm btn-primary" href="/participant/dashboard">Participant Dashboard</a>
           {% elif role == "theme_incharge" %}
             <a class="btn btn-sm btn-primary" href="/incharge/dashboard">Incharge Panel</a>
           {% elif role == "reviewer" %}
@@ -108,7 +108,7 @@
           {% if current_user %}
             {% set role = current_user.role %}
             {% if role == "student" %}
-              <a class="btn btn-primary" href="/student/dashboard">Participant Dashboard</a>
+              <a class="btn btn-primary" href="/participant/dashboard">Participant Dashboard</a>
             {% elif role == "theme_incharge" %}
               <a class="btn btn-primary" href="/incharge/dashboard">Incharge Panel</a>
             {% elif role == "reviewer" %}

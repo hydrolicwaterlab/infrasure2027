@@ -153,7 +153,7 @@ def require_any(*roles: str):
 def home_for_role(user: dict) -> str:
     """Post-login landing page for a role."""
     if user["role"] == "student":
-        return "/student/dashboard"
+        return "/participant/dashboard"
     if user["role"] == "theme_incharge":
         return "/incharge/dashboard"
     if user["role"] == "reviewer":

@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui with context %}
-{% block title %}Abstract Round decision — {{ config.name }}{% endblock %}
+{% block title %}Feedback — {{ config.name }}{% endblock %}
 {% block content %}
 
 <section class="page-head page-head-compact">
   <div class="container">
     <p class="eyebrow eyebrow-on-dark">Review · {{ sub.id }}</p>
     <h1 class="display display-on-dark">{{ sub.title }}</h1>
-    <p class="page-head-sub">
-      Decide whether this Abstract Round moves to the Selection Round — Selected for the Selection Round, or Not Selected. Your feedback is shown to the student.
-    </p>
+    <p class="page-head-sub">Leave feedback for the author. Every submission advances — the final Selected / Not Selected decision comes later, after the revision window.</p>
   </div>
 </section>
 
@@ -24,18 +22,15 @@
       <form method="post" action="/incharge/review/{{ sub.id }}" novalidate>
         {{ ui.csrf_field() }}
         <fieldset class="form-block">
-          <legend class="form-legend">Your decision</legend>
-          <div class="form-actions form-actions-stack">
-            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="r1_selected">Selected for the Selection Round</button>
-            <button class="btn btn-danger btn-lg btn-block" type="submit" name="decision" value="r1_not_selected"
-                    onclick="return confirm('Not selected ends this submission — the student cannot resubmit it. Continue?')">Not selected</button>
+          <legend class="form-legend">Review feedback</legend>
+          <div class="field">
+            <label for="feedback">Feedback (shown to the student)</label>
+            <textarea id="feedback" name="feedback" rows="8" maxlength="2000"
+                      placeholder="How the paper could be improved, or what to address in the revised version…" required>{{ values.feedback or "" }}</textarea>
           </div>
         </fieldset>
-        <div class="field">
-          <label for="comment">Feedback (shown to the student)</label>
-          <textarea id="comment" name="comment" rows="8" maxlength="1000" placeholder="Why it moves forward, or how it could be improved…" required>{{ values.comment or "" }}</textarea>
-        </div>
         <div class="form-actions">
+          <button class="btn btn-primary btn-lg" type="submit">Save feedback</button>
           <a class="btn btn-ghost btn-lg" href="{{ back_url }}">Cancel</a>
         </div>
       </form>

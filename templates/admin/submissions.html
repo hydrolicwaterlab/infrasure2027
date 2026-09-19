@@ -7,7 +7,7 @@
   <div class="container">
     <p class="eyebrow eyebrow-on-dark">Admin · Submissions</p>
     <h1 class="display display-on-dark">Every submission, one table.</h1>
-    <p class="page-head-sub">Abstract Round submissions need a reviewer or incharge decision — Selected for the Selection Round or Not Selected.</p>
+    <p class="page-head-sub">Papers awaiting feedback, awaiting a final decision, and decided.</p>
   </div>
 </section>
 
@@ -15,44 +15,40 @@
   <div class="container">
     <div class="admin-top">
       {{ ui.admin_nav("submissions") }}
-      <div>
-        {{ ui.round_tabs("/admin/submissions", filters.round) }}
-        {{ ui.filter_form("/admin/submissions", themes, filters.theme, filters.status, filters.type, filters.round, filters.q, show_round=False) }}
-      </div>
     </div>
+    {{ ui.filter_form("/admin/submissions", themes, filters.theme, filters.status, filters.type, filters.q) }}
+
     <div class="panel">
       <div class="panel-head">
-        <h2 class="panel-title">Pending{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
-        <p class="panel-sub">
-          {% if filters.round == 2 %}
-            Selection Round content still awaiting a reviewer or an incharge decision.
-          {% else %}
-            Abstract Round submissions still awaiting a reviewer or an incharge decision.
-          {% endif %}
-        </p>
+        <h2 class="panel-title">Awaiting feedback{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
       </div>
       {{ ui.subs_table(
-          pending_subs, themes,
+          feedback_subs, themes,
           "Nothing pending",
-          "Try clearing the filters, or wait for students to apply.",
-          "/admin/submissions", "Show all", view_prefix="/incharge/submission", round_no=filters.round, show_title=False) }}
+          "Try clearing the filters, or wait for students to submit.",
+          "/admin/submissions", "Show all", view_prefix="/incharge/submission", show_title=False) }}
     </div>
+
     <div class="panel">
       <div class="panel-head">
-        <h2 class="panel-title">Done{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
-        <p class="panel-sub">
-          {% if filters.round == 2 %}
-            Final decisions recorded for this round.
-          {% else %}
-            Submissions already decided for the Selection Round or Not Selected.
-          {% endif %}
-        </p>
+        <h2 class="panel-title">Awaiting final decision{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
+      </div>
+      {{ ui.subs_table(
+          final_subs, themes,
+          "Nothing awaiting a final decision",
+          "Papers whose feedback has been released appear here.",
+          "/admin/submissions", "Show all", view_prefix="/incharge/submission", show_title=False) }}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Decided{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
       </div>
       {{ ui.subs_table(
           done_subs, themes,
           "No decisions yet",
-          "Decisions recorded by incharges or reviewers will be listed here.",
-          "/admin/submissions", "Show all", view_prefix="/incharge/submission", round_no=filters.round, show_title=False) }}
+          "Selected / Not Selected decisions will be listed here.",
+          "/admin/submissions", "Show all", view_prefix="/incharge/submission", show_title=False) }}
     </div>
   </div>
 </section>

@@ -28,10 +28,11 @@ from app_routes.service import (
     reviewers_list,
     scoped_submissions,
     set_incharge_themes,
+    set_presentation_format,
     set_reviewer_themes,
     set_site_flag,
     site_state,
-    split_round_stages,
+    split_paper_stages,
     students_map,
     submission_actions,
     toggle_announcement,
@@ -63,15 +64,16 @@ def _stats() -> dict:
         "incharges": len(incharges),
         "reviewers": len(reviewers),
         "submissions": len(subs),
-        "r1_pending": sum(1 for s in subs if s.get("r1_status") == "r1_pending"),
-        "r1_under_review": sum(1 for s in subs if s.get("r1_status") == "r1_under_review"),
-        "r1_selected": sum(1 for s in subs if s.get("r1_status") == "r1_selected"),
-        "r1_not_selected": sum(1 for s in subs if s.get("r1_status") == "r1_not_selected"),
-        "formats_chosen": sum(1 for s in subs if s.get("format") in ("ppt", "poster")),
-        "r2_pending": sum(1 for s in subs if s.get("r2_status") == "r2_pending"),
-        "r2_under_review": sum(1 for s in subs if s.get("r2_status") == "r2_under_review"),
-        "final_selected": sum(1 for s in subs if s.get("r2_status") == "selected"),
-        "final_not_selected": sum(1 for s in subs if s.get("r2_status") == "not_selected"),
+        "submitted": sum(1 for s in subs if s.get("status") == "submitted"),
+        "under_review": sum(1 for s in subs if s.get("status") == "under_review"),
+        "feedback_released": sum(1 for s in subs if s.get("status") == "feedback_released"),
+        "round2_submitted": sum(1 for s in subs if s.get("status") == "round2_submitted"),
+        "selected": sum(1 for s in subs if s.get("status") == "selected"),
+        "not_selected": sum(1 for s in subs if s.get("status") == "not_selected"),
+        "presenting": sum(1 for s in subs if s.get("status") == "selected" and s.get("presenting")),
+        "formats_chosen": sum(1 for s in subs if s.get("status") == "selected" and s.get("presentation_format") in ("ppt", "poster")),
+        "full_papers": sum(1 for s in subs if s.get("paper_type") == "full_paper"),
+        "extended_abstracts": sum(1 for s in subs if s.get("paper_type") == "extended_abstract"),
         "registrations": len(regs),
         "reg_pending": sum(1 for r in regs if r["status"] == "pending"),
         "reg_approved": sum(1 for r in regs if r["status"] == "approved"),
@@ -87,8 +89,8 @@ def _stats() -> dict:
     }
 
 
-def _submit_actions(round_no: int):
-    return lambda s: submission_actions(None, s, round_no)
+def _submit_actions():
+    return lambda s: submission_actions(None, s)
 
 
 @router.get("/dashboard")
@@ -138,36 +140,51 @@ def submissions(
     theme: str = "",
     status: str = "",
     type: str = "",
-    round: int = 1,
     q: str = "",
 ):
-    round_no = 2 if round == 2 else 1
     # base scoped + theme/status/type filter
-    subs = filter_submissions(scoped_submissions(user), theme, status, type, round_no)
+    subs = filter_submissions(scoped_submissions(user), theme, status, type)
     # gmail / email search — resolve owner email via students_map
     if q and q.strip():
         q_clean = q.strip().lower()
         smap = students_map()
         subs = [s for s in subs if q_clean in (smap.get(s.get("user_id"), {}).get("email") or "").lower()]
-    pending_subs, done_subs = split_round_stages(subs, round_no)
-    pending_subs = decorated_subs(pending_subs, students_map(), _submit_actions(round_no), round_no)
-    done_subs = decorated_subs(done_subs, students_map(), _submit_actions(round_no), round_no)
+    feedback_subs, round2_subs, final_subs, done_subs = split_paper_stages(subs)
+    feedback_subs = decorated_subs(feedback_subs, students_map(), _submit_actions())
+    round2_subs = decorated_subs(round2_subs, students_map(), _submit_actions())
+    final_subs = decorated_subs(final_subs, students_map(), _submit_actions())
+    done_subs = decorated_subs(done_subs, students_map(), _submit_actions())
     return render_msg(
         request,
         "admin/submissions.html",
         msg=request.query_params.get("msg"),
         user=user,
-        subs=pending_subs + done_subs,
-        pending_subs=pending_subs,
+        feedback_subs=feedback_subs,
+        round2_subs=round2_subs,
+        final_subs=final_subs,
         done_subs=done_subs,
         themes=SITE_CONFIG["themes"],
-        filters={"theme": theme, "status": status, "type": type, "round": round_no, "q": q},
+        filters={"theme": theme, "status": status, "type": type, "q": q},
         q=q,
     )
 
 
-# ---------- registrations ----------
+@router.post("/submissions/{sid}/format")
+def submission_format(
+    request: Request,
+    sid: str,
+    user: dict = Depends(ADMIN),
+    presentation_format: str = Form(""),
+):
+    _, err = set_presentation_format(sid, presentation_format)
+    if err == "bad_format":
+        return flash_response(f"/incharge/submission/{sid}", "bad_format")
+    if err:
+        return flash_response("/admin/submissions", err)
+    return flash_response(f"/incharge/submission/{sid}", "presentation_format_saved")
 
+
+# ---------- registrations ----------
 @router.get("/registrations")
 def registrations(request: Request, user: dict = Depends(ADMIN), q: str = ""):
     regs = sorted(load("registrations"), key=lambda r: r.get("created_at", ""), reverse=True)

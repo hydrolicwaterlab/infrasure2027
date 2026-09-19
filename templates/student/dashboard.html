@@ -2,16 +2,9 @@
 {% import "_macros.html" as ui with context %}
 {% block title %}Participant Dashboard — {{ config.name }}{% endblock %}
 {% block content %}
-{% set ns = namespace(selected=0, final=0) %}
-{% for t in threads %}
-  {% if t.r1_status == "r1_selected" %}{% set ns.selected = ns.selected + 1 %}{% endif %}
-  {% if t.r2_status == "selected" %}{% set ns.final = ns.final + 1 %}{% endif %}
-{% endfor %}
-{% set selected_count = ns.selected %}
-{% set final_count = ns.final %}
-{% set declared_r1 = site_state.round1_results_declared %}
-{% set declared_r2 = site_state.round2_results_declared %}
-{% set pay_open = site_state.payment_open %}
+{% set declared = site_state.results_declared %}
+{% set can_submit = info_done and site_state.paper_submission_open %}
+{% set awaiting = threads | selectattr("status", "in", ["submitted", "under_review", "feedback_released", "round2_submitted"]) | list | length %}
 
 <section class="page-head">
   <div class="container dash-head">
@@ -22,70 +15,44 @@
     </div>
     <div class="page-head-actions">
       {% if not info_done %}
-        <a class="btn btn-accent" href="/student/info">Complete your details</a>
-      {% elif site_state.round1_open and can_apply %}
-        <a class="btn btn-accent" href="/student/apply">＋ Submit Abstract Round</a>
-      {% elif can_apply %}
-        <span class="btn btn-accent btn-disabled" aria-disabled="true" title="Abstract Round submissions are closed">Abstract Round closed</span>
+        <a class="btn btn-accent" href="/participant/info">Complete your details</a>
+      {% elif can_submit %}
+        <a class="btn btn-accent" href="/participant/apply">＋ New submission</a>
       {% else %}
-        <span class="btn btn-accent btn-disabled" aria-disabled="true">Limit reached — 2/2 presentations</span>
+        <span class="btn btn-accent btn-disabled" aria-disabled="true" title="Paper submission is closed">Submissions closed</span>
       {% endif %}
-      {% if declared_r2 and pay_open and has_selected %}
-        {% if reg %}
-          {% if reg.status == "approved" %}
-            <a class="btn btn-light" href="/student/payment">{{ "View payment" if reg.fee_paid else "Proceed to payment" }}</a>
-          {% else %}
-            <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment opens once the conference team approves your details">Approval pending</span>
-          {% endif %}
-        {% else %}
-          <a class="btn btn-light" href="/student/info">Complete your details</a>
-        {% endif %}
+      {% if has_selected and declared and site_state.payment_open %}
+        <a class="btn btn-light" href="/participant/payment">{{ "View payment" if reg and reg.fee_paid else "Proceed to payment" }}</a>
       {% else %}
-        {% if has_selected and not declared_r2 %}
-          <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment opens once the final results are announced">Payment locked</span>
-        {% elif has_selected and not pay_open %}
-          <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment is currently closed">Payment locked</span>
-        {% else %}
-          <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment opens once a presentation is selected">Payment locked</span>
-        {% endif %}
+        <span class="btn btn-light btn-disabled" aria-disabled="true" title="Payment opens once results are declared">Payment locked</span>
       {% endif %}
     </div>
   </div>
 </section>
 
-{% set ns2 = namespace(awaiting=0, live=0) %}
-{% for t in threads %}
-  {% if t.r1_status not in ("r1_selected", "r1_not_selected") %}
-    {% set ns2.awaiting = ns2.awaiting + 1 %}
-  {% endif %}
-{% endfor %}
-
 <section class="dash-section">
   <div class="container">
     <div class="stat-cards">
       <div class="stat-card">
-        <p class="stat-value">{{ threads | length }}<small> / 2</small></p>
-        <p class="stat-label">Presentations</p>
+        <p class="stat-value">{{ threads | length }}</p>
+        <p class="stat-label">Submissions</p>
       </div>
       <div class="stat-card">
-        <p class="stat-value">{{ ns2.awaiting }}</p>
+        <p class="stat-value">{{ awaiting }}</p>
         <p class="stat-label">Awaiting action</p>
       </div>
       <div class="stat-card">
-        <p class="stat-value{% if selected_count %} stat-good{% endif %}">{{ selected_count if declared_r1 else "—" }}</p>
-        <p class="stat-label">Selected for the Selection Round</p>
+        <p class="stat-value{% if selected_count %} stat-good{% endif %}">{{ selected_count if declared else "—" }}</p>
+        <p class="stat-label">Selected</p>
       </div>
       <div class="stat-card">
-        <p class="stat-value{% if final_count %} stat-good{% endif %}">{{ final_count if declared_r2 else "—" }}</p>
-        <p class="stat-label">Finally selected</p>
+        <p class="stat-value{% if presenting_count %} stat-good{% endif %}">{{ presenting_count }}</p>
+        <p class="stat-label">To present</p>
       </div>
       <div class="stat-card">
         <p class="stat-value">
-          {% if reg %}
-            {{ ui.status_badge(reg.status) }}{% if reg.fee_paid %} · Fee paid{% endif %}
-          {% else %}
-            <span class="badge badge-none">Details missing</span>
-          {% endif %}
+          {% if reg %}{{ ui.status_badge(reg.status) }}{% if reg.fee_paid %} · Fee paid{% endif %}
+          {% else %}<span class="badge badge-none">Details missing</span>{% endif %}
         </p>
         <p class="stat-label">My details</p>
       </div>
@@ -95,66 +62,59 @@
       <div class="dash-col-main">
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-title">My presentations</h2>
-            <p class="panel-sub">Abstract Round is your title and abstract. If selected, you choose your presentation format (PPT or Poster) for the Selection Round.</p>
+            <h2 class="panel-title">My submissions</h2>
+            <p class="panel-sub">Submit as many Full Papers or Extended Abstracts as you like. Every paper gets review feedback; submit the final version, then a final Selected / Not Selected decision is made.</p>
           </div>
 
           {% if threads %}
             {% for t in threads %}
               <article class="sub-card">
                 <div class="sub-top">
-                  {% if t.r2_status %}{{ ui.type_badge(t.format) }}{% endif %}
-                  {{ ui.round_badge(1) }}{% if t.r2_status %}{{ ui.round_badge(2) }}{% endif %}
+                  {{ ui.paper_type_badge(t.paper_type) }}
                   <span class="sub-theme">{{ t.theme }} · {{ ui.theme_name(t.theme, config.themes) }}</span>
                   <span class="badge badge-right">
-                    {% if t.r2_status %}
-                      {% if t.r2_status in ("selected", "not_selected") and not declared_r2 %}{{ ui.status_badge("r2_awaiting") }}{% else %}{{ ui.status_badge(t.r2_status) }}{% endif %}
-                    {% elif t.r1_status in ("r1_selected", "r1_not_selected") and not declared_r1 %}{{ ui.status_badge("r1_awaiting") }}{% else %}{{ ui.status_badge(t.r1_status) }}{% endif %}
+                    {% if t.status in ("selected", "not_selected") and not declared %}{{ ui.status_badge("awaiting") }}{% else %}{{ ui.status_badge(t.status) }}{% endif %}
                   </span>
                 </div>
-                <h3 class="sub-title"><a class="sub-title-link" href="/student/submission/{{ t.id }}">{{ t.title }}</a></h3>
-                <p class="sub-desc">{{ t.description }}</p>
+                <h3 class="sub-title"><a class="sub-title-link" href="/participant/submission/{{ t.id }}">{{ t.title }}</a></h3>
+                <p class="sub-desc">{% for a in t.authors %}{{ a.name }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
 
-                {% if t.r2_comment and declared_r2 %}
+                {% if declared and t.status in ("selected", "not_selected") and t.decision_comment %}
                   <div class="sub-review">
-                    <p class="sub-review-label">Final decision — {{ ui.status_badge(t.r2_status) }}</p>
-                    <p>“{{ t.r2_comment }}”</p>
+                    <p class="sub-review-label">Final decision — {{ ui.status_badge(t.status) }}</p>
+                    <p>“{{ t.decision_comment }}”</p>
                   </div>
-                {% elif declared_r1 and t.r1_status in ("r1_selected", "r1_not_selected") and t.r1_comment %}
+                {% elif t.feedback %}
                   <div class="sub-review">
-                    <p class="sub-review-label">Abstract Round decision — {{ ui.status_badge(t.r1_status) }}</p>
-                    <p>“{{ t.r1_comment }}”</p>
+                    <p class="sub-review-label">Review feedback</p>
+                    <p>“{{ t.feedback }}”</p>
                   </div>
                 {% endif %}
 
                 <div class="sub-foot">
-                  <span>Abstract Round submitted {{ t.created_at[:10] }}{% if t.r2_status and t.format_chosen_at %} · Format chosen {{ t.format_chosen_at[:10] }}{% endif %}</span>
-                  <a class="btn btn-sm btn-ghost" href="/student/submission/{{ t.id }}">View</a>
-                  {% if t.r1_status == "r1_pending" and site_state.round1_open %}
-                    <a class="btn btn-sm btn-outline" href="/student/edit/{{ t.id }}">Edit Abstract Round</a>
-                  {% elif declared_r1 and site_state.round2_open and t.r1_status == "r1_selected" and not t.r2_status %}
-                    <a class="btn btn-sm btn-primary" href="/student/submission/{{ t.id }}/round2">Choose format</a>
-                  {% elif declared_r1 and site_state.round2_open and t.r2_status == "r2_pending" and t.format == "poster" %}
-                    <a class="btn btn-sm btn-primary" href="/student/submission/{{ t.id }}/round2/content">Edit Selection Round content</a>
-                  {% elif declared_r1 and site_state.round2_open and t.r2_status == "r2_pending" and t.format == "ppt" %}
-                    <a class="btn btn-sm btn-primary" href="/student/submission/{{ t.id }}/round2/upload">Replace PDF</a>
-                  {% elif t.r2_status %}
-                    <span class="btn btn-sm btn-primary btn-disabled" aria-disabled="true">Format: {{ "PPT" if t.format == "ppt" else "Poster" }}</span>
+                  <span>Submitted {{ (t.created_at or "")[:10] }}{% if t.presenting %} · {{ ui.type_badge(t.presentation_format) }}{% endif %}</span>
+                  <a class="btn btn-sm btn-ghost" href="/participant/submission/{{ t.id }}">View</a>
+                  {% if t.status == "submitted" and site_state.paper_submission_open %}
+                    <a class="btn btn-sm btn-outline" href="/participant/edit/{{ t.id }}">Edit paper</a>
+                  {% elif t.status == "feedback_released" and site_state.final_submission_open %}
+                    <a class="btn btn-sm btn-primary" href="/participant/round2/{{ t.id }}">Submit for Final Review</a>
+                  {% elif t.status == "selected" and declared and site_state.results_declared and not t.presenting %}
+                    <a class="btn btn-sm btn-primary" href="/participant/submission/{{ t.id }}/present">Choose presentation</a>
+                  {% elif t.presenting %}
+                    <span class="btn btn-sm btn-primary btn-disabled" aria-disabled="true">Presenting · {{ "Presentation" if t.presentation_format == "ppt" else "Poster" }}</span>
                   {% endif %}
                 </div>
               </article>
             {% endfor %}
           {% else %}
-            {{ ui.empty_state("No presentations yet", "Present your research under any of the nine themes. First complete your details, then submit Abstract Round.", "/student/info" if not info_done else "/student/apply", "Complete your details" if not info_done else "Submit Abstract Round") }}
+            {{ ui.empty_state("No submissions yet", "Present your research under any of the nine themes. First complete your details, then submit a Full Paper or Extended Abstract.", "/participant/info" if not info_done else "/participant/apply", "Complete your details" if not info_done else "New submission") }}
           {% endif %}
         </div>
       </div>
 
       <div class="dash-col-side">
         <div class="panel">
-          <div class="panel-head">
-            <h2 class="panel-title">My details</h2>
-          </div>
+          <div class="panel-head"><h2 class="panel-title">My details</h2></div>
           {% if reg %}
             <dl class="reg-dl">
               <dt>Full name</dt><dd>{{ reg.full_name }}</dd>
@@ -166,58 +126,34 @@
                     {% if reg.student_level == "UG" and reg.ug_program %}<span class="badge badge-type">{{ reg.ug_program }}</span>{% endif %}
                   {% elif reg.participant_category == "Academic" and reg.academic_role %}
                     <span class="badge badge-type">{{ reg.academic_role }}</span>
-                    {% if reg.professor_type %}<span class="badge badge-type">{{ reg.professor_type }}</span>{% endif %}
-                  {% elif reg.participant_category == "Industry" and reg.position %}
+                  {% elif reg.participant_category in ["Industry", "Others"] and reg.position %}
                     <span class="badge badge-type">{{ reg.position }}</span>
                   {% endif %}
                 </dd>
-                {% if reg.degree_name %}<dt>Degree</dt><dd>{{ reg.degree_name }}</dd>{% endif %}
-                {% if reg.department %}<dt>Department</dt><dd>{{ reg.department }}</dd>{% endif %}
                 {% if reg.institute_name %}<dt>Institute</dt><dd>{{ reg.institute_name }}</dd>{% endif %}
-                {% if reg.institute_address %}<dt>Address</dt><dd style="font-size:.9rem;line-height:1.5;overflow-wrap:anywhere;word-break:break-word">{{ reg.institute_address }}{% if reg.institute_country or reg.institute_zipcode %} · {{ reg.institute_country or '' }}{% if reg.institute_zipcode %} - {{ reg.institute_zipcode }}{% endif %}{% endif %}</dd>{% endif %}
-                {% if reg.institute_country %}<dt>Country</dt><dd>{{ reg.institute_country }}</dd>{% endif %}
-                {% if reg.institute_zipcode %}<dt>Zipcode</dt><dd>{{ reg.institute_zipcode }}</dd>{% endif %}
-                {% if reg.institute_email %}<dt>Inst. email</dt><dd>{{ reg.institute_email }}</dd>{% endif %}
-                {% if reg.supervisor_name %}<dt>Supervisor</dt><dd>{{ reg.supervisor_name }}</dd>{% endif %}
                 {% if reg.company_name %}<dt>Company</dt><dd>{{ reg.company_name }}</dd>{% endif %}
-                {% if reg.company_email %}<dt>Company email</dt><dd>{{ reg.company_email }}</dd>{% endif %}
-                {% if reg.company_address %}<dt>Company address</dt><dd style="font-size:.9rem;line-height:1.5;overflow-wrap:anywhere;word-break:break-word">{{ reg.company_address }}{% if reg.company_country or reg.company_zipcode %} · {{ reg.company_country or '' }}{% if reg.company_zipcode %} - {{ reg.company_zipcode }}{% endif %}{% endif %}</dd>{% endif %}
-                {% if reg.company_country %}<dt>Company country</dt><dd>{{ reg.company_country }}</dd>{% endif %}
-                {% if reg.company_zipcode %}<dt>Company zipcode</dt><dd>{{ reg.company_zipcode }}</dd>{% endif %}
-                {# legacy fallback #}
-                {% if not reg.participant_category and reg.designation %}<dt>Designation</dt><dd>{{ reg.designation }}</dd>{% endif %}
-                {% if not reg.institute_name and reg.affiliation %}<dt>Affiliation</dt><dd>{{ reg.affiliation }}</dd>{% endif %}
-              {% else %}
-                <dt>Designation</dt><dd>{{ reg.designation }}</dd>
-                <dt>Affiliation</dt><dd>{{ reg.affiliation }}</dd>
               {% endif %}
               <dt>Phone</dt><dd>{{ reg.phone }}</dd>
-              <dt>Mode</dt><dd>{{ ui.mode_badge(reg.participation_mode) }}</dd>
-              <dt>Status</dt>
-              <dd>{{ ui.status_badge(reg.status) }}{% if reg.fee_paid %} · Fee paid{% endif %}</dd>
+              <dt>Status</dt><dd>{{ ui.status_badge(reg.status) }}{% if reg.fee_paid %} · Fee paid{% endif %}</dd>
             </dl>
             {% if reg.status == "pending" %}
-              <a class="btn btn-sm btn-outline" href="/student/info">Edit details</a>
+              <a class="btn btn-sm btn-outline" href="/participant/info">Edit details</a>
             {% endif %}
           {% else %}
-            <p class="side-note">Complete your details once — you can then submit up to two presentations.</p>
-            <a class="btn btn-primary" href="/student/info">Complete details</a>
+            <p class="side-note">Complete your details once — you can then submit as many papers as you like.</p>
+            <a class="btn btn-primary" href="/participant/info">Complete details</a>
           {% endif %}
         </div>
 
         <div class="panel">
-          <div class="panel-head">
-            <h2 class="panel-title">How the two rounds work</h2>
-          </div>
+          <div class="panel-head"><h2 class="panel-title">How it works</h2></div>
           <ul class="rules-list">
-            <li>Submit your title and abstract — it will be reviewed by our team.</li>
-            <li>Once reviewed, you'll receive feedback.</li>
-            <li>Then choose what you'll present at the event — PPT or Poster.</li>
-            <li>If you choose Poster, submit your revised abstract.</li>
-            <li>If you choose PPT, submit the full paper or extended abstract based on the given template.</li>
-            <li>It will be reviewed again, and you'll be notified whether you're selected.</li>
-            <li>If selected, proceed to payment for each submission.</li>
-            <li>If both your submissions are selected, decide which one you'll present — if you want to present both, payment is required twice (once per submission).</li>
+            <li>Submit a Full Paper or Extended Abstract with a title, PDF and authors.</li>
+            <li>The theme incharge or a reviewer reads it and sends you review feedback.</li>
+            <li>Review the feedback, optionally upload a revised PDF / update authors, then click <strong>Submit for Final Review</strong>.</li>
+            <li>The theme incharge (or the assigned reviewer) then decides whether your paper is selected.</li>
+            <li>If selected, choose Presentation or Poster and tick the papers you will present.</li>
+            <li>Payment is charged per presentation you opt in to.</li>
           </ul>
         </div>
       </div>

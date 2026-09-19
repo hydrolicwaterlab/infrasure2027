@@ -1,13 +1,13 @@
-"""Reviewer routes — dashboards + Abstract Round / Selection Round decisions."""
+"""Reviewer routes — dashboards, round-1 feedback, final decision."""
 from fastapi import APIRouter, Depends, Form, Request
 
-from app_routes.schemas import RoundOneDecisionForm, RoundTwoDecisionForm, validate
+from app_routes.schemas import FinalDecisionForm, PaperFeedbackForm, validate
 from app_routes.service import (
     apply_final_decision,
-    apply_round1_decision,
     current_view,
-    reviewer_round2_submissions,
     reviewer_submissions,
+    save_feedback,
+    split_paper_stages,
     students_map,
 )
 from app_routes.utils import flash_response, render_msg
@@ -20,29 +20,27 @@ router = APIRouter(prefix="/reviewer")
 REVIEWER = require_role("reviewer")
 
 
-def review_for(reviewer: dict, sid: str):
-    """Return (submission, flash_code | None) — Abstract Round, assigned to this reviewer, still open."""
+def _review_for(reviewer: dict, sid: str):
+    """Return (submission, flash_code | None) — assigned, awaiting feedback."""
     sub = one("submissions", id=sid)
     if not sub:
         return None, "submission_not_found"
-    if sub.get("r1_reviewer_id") != reviewer["id"]:
+    if sub.get("reviewer_id") != reviewer["id"]:
         return None, "not_your_assignment"
-    if sub["r1_status"] != "r1_under_review":
+    if sub.get("status") != "under_review":
         return None, "bad_status"
     return sub, None
 
 
-def review2_for(reviewer: dict, sid: str):
-    """Return (submission, flash_code | None) — Selection Round, assigned to this reviewer, still open."""
+def _final_for(reviewer: dict, sid: str):
+    """Return (submission, flash_code | None) — assigned, Round 2 submitted, awaiting final decision."""
     sub = one("submissions", id=sid)
     if not sub:
         return None, "submission_not_found"
-    if sub.get("r2_reviewer_id") != reviewer["id"]:
+    if sub.get("reviewer_id") != reviewer["id"]:
         return None, "not_your_assignment"
-    if sub.get("r2_status") != "r2_under_review":
+    if sub.get("status") != "round2_submitted":
         return None, "bad_status"
-    if not sub.get("r2_status"):
-        return None, "need_content"
     return sub, None
 
 
@@ -57,36 +55,27 @@ def _decorate(subs: list) -> list:
 
 
 @router.get("/dashboard")
-def dashboard(request: Request, user: dict = Depends(REVIEWER), round: int = 1):
-    round_no = 2 if round == 2 else 1
-    r1_subs = reviewer_submissions(user)
-    r2_subs = reviewer_round2_submissions(user)
-    to_review_count = (
-        sum(1 for s in r1_subs if s["r1_status"] == "r1_under_review")
-        + sum(1 for s in r2_subs if s.get("r2_status") == "r2_under_review")
-    )
-    if round_no == 2:
-        pending = [s for s in r2_subs if s.get("r2_status") == "r2_under_review"]
-        done = [s for s in r2_subs if s.get("r2_status") in ("selected", "not_selected")]
-    else:
-        pending = [s for s in r1_subs if s["r1_status"] == "r1_under_review"]
-        done = [s for s in r1_subs if s["r1_status"] in ("r1_selected", "r1_not_selected")]
+def dashboard(request: Request, user: dict = Depends(REVIEWER)):
+    subs = reviewer_submissions(user)
+    feedback_subs, round2_subs, final_subs, done = split_paper_stages(subs)
+    to_review_count = len(feedback_subs) + len(final_subs)
     return render_msg(
         request,
         "reviewer/dashboard.html",
         msg=request.query_params.get("msg"),
         user=user,
         themes=SITE_CONFIG["themes"],
-        pending=_decorate(pending),
+        feedback_subs=_decorate(feedback_subs),
+        round2_subs=_decorate(round2_subs),
+        final_subs=_decorate(final_subs),
         done=_decorate(done),
-        round_no=round_no,
         to_review_count=to_review_count,
     )
 
 
 @router.get("/review/{sid}")
 def review_form(request: Request, sid: str, user: dict = Depends(REVIEWER)):
-    sub, err = review_for(user, sid)
+    sub, err = _review_for(user, sid)
     if err:
         return flash_response("/reviewer/dashboard", err)
     return render_msg(
@@ -95,7 +84,7 @@ def review_form(request: Request, sid: str, user: dict = Depends(REVIEWER)):
         user=user,
         sub=current_view(sub),
         students=students_map(),
-        values={"decision": "", "comment": sub.get("r1_comment") or ""},
+        values={"feedback": sub.get("feedback") or ""},
         errors=None,
     )
 
@@ -105,13 +94,12 @@ def review_submit(
     request: Request,
     sid: str,
     user: dict = Depends(REVIEWER),
-    decision: str = Form(""),
-    comment: str = Form(""),
+    feedback: str = Form(""),
 ):
-    sub, err = review_for(user, sid)
+    sub, err = _review_for(user, sid)
     if err:
         return flash_response("/reviewer/dashboard", err)
-    form, errors = validate(RoundOneDecisionForm, {"decision": decision, "comment": comment})
+    form, errors = validate(PaperFeedbackForm, {"feedback": feedback})
     if errors:
         return render_msg(
             request,
@@ -119,47 +107,47 @@ def review_submit(
             user=user,
             sub=current_view(sub),
             students=students_map(),
-            values={"decision": decision, "comment": comment},
+            values={"feedback": feedback},
             errors=errors,
         )
-    _, e = apply_round1_decision(user, sid, form.decision, form.comment)
+    _, e = save_feedback(user, sid, form.feedback)
     if e:
         return flash_response("/reviewer/dashboard", e)
-    return flash_response("/reviewer/dashboard", "review_submitted")
+    return flash_response("/reviewer/dashboard", "feedback_saved")
 
 
-@router.get("/review/{sid}/round2")
-def review2_form(request: Request, sid: str, user: dict = Depends(REVIEWER)):
-    sub, err = review2_for(user, sid)
+@router.get("/final/{sid}")
+def final_form(request: Request, sid: str, user: dict = Depends(REVIEWER)):
+    sub, err = _final_for(user, sid)
     if err:
-        return flash_response("/reviewer/dashboard?round=2", err)
+        return flash_response("/reviewer/dashboard", err)
     return render_msg(
         request,
-        "reviewer/review2.html",
+        "reviewer/decision.html",
         user=user,
         sub=current_view(sub),
         students=students_map(),
-        values={"decision": "", "comment": sub.get("r2_comment") or ""},
+        values={"decision": "", "comment": sub.get("decision_comment") or ""},
         errors=None,
     )
 
 
-@router.post("/review/{sid}/round2")
-def review2_submit(
+@router.post("/final/{sid}")
+def final_submit(
     request: Request,
     sid: str,
     user: dict = Depends(REVIEWER),
     decision: str = Form(""),
     comment: str = Form(""),
 ):
-    sub, err = review2_for(user, sid)
+    sub, err = _final_for(user, sid)
     if err:
-        return flash_response("/reviewer/dashboard?round=2", err)
-    form, errors = validate(RoundTwoDecisionForm, {"decision": decision, "comment": comment})
+        return flash_response("/reviewer/dashboard", err)
+    form, errors = validate(FinalDecisionForm, {"decision": decision, "comment": comment})
     if errors:
         return render_msg(
             request,
-            "reviewer/review2.html",
+            "reviewer/decision.html",
             user=user,
             sub=current_view(sub),
             students=students_map(),
@@ -168,5 +156,5 @@ def review2_submit(
         )
     _, e = apply_final_decision(user, sid, form.decision, form.comment)
     if e:
-        return flash_response("/reviewer/dashboard?round=2", e)
-    return flash_response("/reviewer/dashboard?round=2", "final_decision_saved")
+        return flash_response("/reviewer/dashboard", e)
+    return flash_response("/reviewer/dashboard", "final_decision_saved")

@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}{{ "Edit paper" if mode == "edit" else "New submission" }} — {{ config.name }}{% endblock %}
+{% block content %}
+{% set pt = values.paper_type or (sub.paper_type if sub else "") %}
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Participant portal · {{ "Edit paper" if mode == "edit" else "New submission" }}</p>
+    <h1 class="display display-on-dark">{{ "Edit your paper" if mode == "edit" else "Submit your paper" }}</h1>
+    <p class="page-head-sub">
+      {{ "Full Paper" if pt == "full_paper" else "Extended Abstract" }} ·
+      {% if mode == "edit" %}You can edit this until the reviewer starts.{% else %}Nothing is saved until you submit this form.{% endif %}
+    </p>
+  </div>
+</section>
+
+<section class="form-section form-section-top">
+  <div class="container container-form">
+    {% include "_form_errors.html" %}
+
+    <form method="post" enctype="multipart/form-data" class="panel form-card"
+          action="{% if mode == 'edit' %}/participant/edit/{{ sub.id }}{% else %}/participant/apply{% endif %}" novalidate>
+      {{ ui.csrf_field() }}
+      <input type="hidden" name="paper_type" value="{{ pt }}" />
+
+      <fieldset class="form-block">
+        <legend class="form-legend">1 · Theme</legend>
+        <div class="field">
+          <label for="theme">Choose one of the nine conference themes</label>
+          <select id="theme" name="theme" required>
+            <option value="">— Select a theme —</option>
+            {% for t in config.themes %}
+              <option value="{{ t.label }}" {% if values.theme == t.label %}selected{% endif %}>{{ t.label }} — {{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-block">
+        <legend class="form-legend">2 · Your work</legend>
+        <div class="field">
+          <label for="title">Title</label>
+          <input type="text" id="title" name="title" maxlength="160" value="{{ values.title or '' }}"
+                 placeholder="e.g. AI-based flood forecasting in the Ganga basin" required />
+        </div>
+        <div class="field">
+          <label>Presentation format</label>
+          <div class="choice-row">
+            <label class="choice{% if values.presentation_format == 'poster' %} is-on{% endif %}">
+              <input type="radio" name="presentation_format" value="poster" required
+                     {% if values.presentation_format == 'poster' %}checked{% endif %} />
+              <span><strong>Poster</strong><small>Present a printed poster in the poster session.</small></span>
+            </label>
+            <label class="choice{% if values.presentation_format == 'ppt' %} is-on{% endif %}">
+              <input type="radio" name="presentation_format" value="ppt"
+                     {% if values.presentation_format == 'ppt' %}checked{% endif %} />
+              <span><strong>Presentation</strong><small>Present orally with slides in a technical session.</small></span>
+            </label>
+          </div>
+          <p class="field-hint">Choose how you intend to present this paper if it is selected. You can change this while editing before review starts.</p>
+        </div>
+        <div class="field">
+          <label for="file">PDF{% if mode == "create" %} (required){% else %} (optional — leave blank to keep the current file){% endif %}</label>
+          <input type="file" id="file" name="file" accept="application/pdf,.pdf" {% if mode == "create" %}required{% endif %} />
+          <p class="field-hint">
+            Upload your {{ "Full Paper" if pt == "full_paper" else "Extended Abstract" }} as a PDF (max {{ config.max_pdf_mb }} MB).
+            {% if pt == "full_paper" %}
+              Download the <a href="/media/INFRASURE2027_Full Length_Template.docx" download>Full Paper template (DOCX)</a>.
+            {% else %}
+              Download the <a href="/media/INFRASURE2027_Extended Abstract_Template.pdf" download>Extended Abstract template (PDF)</a>.
+            {% endif %}
+          </p>
+          {% if mode == "edit" and sub.has_pdf %}
+            <p class="side-note">Current file: {{ sub.pdf_name }} · <a href="/pdf/{{ sub.id }}" target="_blank">Open PDF</a></p>
+          {% endif %}
+        </div>
+      </fieldset>
+
+      <fieldset class="form-block">
+        <legend class="form-legend">3 · Authors</legend>
+        <p class="field-hint">List every author — name, designation, affiliation and email. All fields are compulsory; email is not verified.</p>
+        <div id="authors-list" class="authors-list">
+          {% for a in (values.authors or [{}]) %}
+            <div class="author-row">
+              <div class="field">
+                <label>Author name</label>
+                <input type="text" name="author_name" maxlength="120" value="{{ a.name or '' }}" required />
+              </div>
+              <div class="field">
+                <label>Designation</label>
+                <input type="text" name="author_designation" maxlength="120" value="{{ a.designation or '' }}" required />
+              </div>
+              <div class="field">
+                <label>Affiliation</label>
+                <input type="text" name="author_affiliation" maxlength="200" value="{{ a.affiliation or '' }}" required />
+              </div>
+              <div class="field">
+                <label>Author email</label>
+                <input type="text" name="author_email" maxlength="200" value="{{ a.email or '' }}" required />
+              </div>
+              <button type="button" class="btn btn-sm btn-ghost author-remove" aria-label="Remove author">Remove</button>
+            </div>
+          {% endfor %}
+        </div>
+        <template id="author-row-template">
+          <div class="author-row">
+            <div class="field">
+              <label>Author name</label>
+              <input type="text" name="author_name" maxlength="120" required />
+            </div>
+            <div class="field">
+              <label>Designation</label>
+              <input type="text" name="author_designation" maxlength="120" required />
+            </div>
+            <div class="field">
+              <label>Affiliation</label>
+              <input type="text" name="author_affiliation" maxlength="200" required />
+            </div>
+            <div class="field">
+              <label>Author email</label>
+              <input type="text" name="author_email" maxlength="200" required />
+            </div>
+            <button type="button" class="btn btn-sm btn-ghost author-remove" aria-label="Remove author">Remove</button>
+          </div>
+        </template>
+        <button type="button" class="btn btn-sm btn-outline" id="author-add">+ Add author</button>
+      </fieldset>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-lg" type="submit">{{ "Save changes" if mode == "edit" else "Submit paper" }}</button>
+        <a class="btn btn-ghost btn-lg" href="/participant/dashboard">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/authors.js" defer></script>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}New submission — {{ config.name }}{% endblock %}
+{% block content %}
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Participant portal · New submission</p>
+    <h1 class="display display-on-dark">What would you like to submit?</h1>
+    <p class="page-head-sub">Choose the type of your submission. Nothing is saved until you complete the form and submit.</p>
+  </div>
+</section>
+
+<section class="form-section form-section-top">
+  <div class="container container-narrow">
+    <div class="form-card">
+      <div class="choice-list choice-list-cards">
+        <a class="choice choice-card" href="/participant/apply?type=full_paper">
+          <span>
+            <strong>Full Paper</strong>
+            <small>Submit a complete manuscript as a PDF, with a title and full author list.</small>
+          </span>
+        </a>
+        <a class="choice choice-card" href="/participant/apply?type=extended_abstract">
+          <span>
+            <strong>Extended Abstract</strong>
+            <small>Submit an extended abstract as a PDF, with a title and full author list.</small>
+          </span>
+        </a>
+      </div>
+    </div>
+    <div class="form-actions">
+      <a class="btn btn-ghost btn-lg" href="/participant/dashboard">Cancel</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -14,7 +14,7 @@
   const update = () => {
     const cat = getVal('participant_category');
     form.querySelectorAll('[data-branch]').forEach(p => {
-      const show = p.getAttribute('data-branch') === cat;
+      const show = (p.getAttribute('data-branch') || "").split('|').includes(cat);
       p.hidden = !show;
       p.querySelectorAll('input, select, textarea').forEach(inp => {
         if (!show) {
@@ -82,13 +82,26 @@
         if (inp.name === "institute_email" && form.querySelector('#institute_email_same_academic')?.checked && !acctIsPersonal) return;
         if (["department","institute_name","institute_address","institute_country","institute_zipcode","institute_email"].includes(inp.name)) inp.required = true;
       });
-    } else if (cat === "Industry") {
+    } else if (cat === "Industry" || cat === "Others") {
       ["company_name","position","company_email","company_address","company_country","company_zipcode"].forEach(n => {
         if (n === "company_email" && form.querySelector('#company_email_same')?.checked && !acctIsPersonal) return;
         const inp = form.querySelector(`[name="${n}"]`);
         if (inp && !inp.disabled) inp.required = true;
       });
     }
+
+    // Country dropdown → reveal the "Other country name" text input.
+    form.querySelectorAll('[data-show-if$="==Others"]').forEach(p => {
+      const name = p.getAttribute('data-show-if').slice(0, -"==Others".length);
+      const branch = p.closest('[data-branch]');
+      const branchVisible = !branch || !branch.hidden;
+      const show = branchVisible && getVal(name) === "Others";
+      p.hidden = !show;
+      p.querySelectorAll('input, select, textarea').forEach(inp => {
+        inp.disabled = !show;
+        inp.required = show;
+      });
+    });
 
     form.querySelectorAll('input[name="institute_email_same"]').forEach(cb => {
       const branch = cb.closest('[data-branch]');

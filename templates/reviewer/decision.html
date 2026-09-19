@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Final decision — {{ config.name }}{% endblock %}
+{% block content %}
+
+<section class="page-head page-head-compact">
+  <div class="container">
+    <p class="eyebrow eyebrow-on-dark">Reviewer · Final Submission decision</p>
+    <h1 class="display display-on-dark">{{ sub.title }}</h1>
+    <p class="page-head-sub">Final submission received. Record the final decision — Selected, or Not Selected.</p>
+  </div>
+</section>
+
+<section class="form-section">
+  <div class="container review-grid">
+    <div class="panel review-sub">
+      {{ ui.submission_detail(sub, students, themes) }}
+    </div>
+
+    <div class="panel form-card review-form">
+      {% include "_form_errors.html" %}
+      <form method="post" action="/reviewer/final/{{ sub.id }}" novalidate>
+        {{ ui.csrf_field() }}
+        <fieldset class="form-block">
+          <legend class="form-legend">Your decision</legend>
+          <div class="form-actions form-actions-stack">
+            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="selected">Selected</button>
+            <button class="btn btn-danger btn-lg btn-block" type="submit" name="decision" value="not_selected"
+                    onclick="return confirm('Not selected ends this submission. Continue?')">Not selected</button>
+          </div>
+        </fieldset>
+        <div class="field">
+          <label for="comment">Comment (optional, shown to the student)</label>
+          <textarea id="comment" name="comment" rows="6" maxlength="1000" placeholder="Optional note to accompany the decision…">{{ values.comment or "" }}</textarea>
+        </div>
+        <div class="form-actions">
+          <a class="btn btn-ghost btn-lg" href="/reviewer/dashboard">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

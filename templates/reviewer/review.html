@@ -1,32 +1,20 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui with context %}
-{% block title %}Review submission — {{ config.name }}{% endblock %}
+{% block title %}Review paper — {{ config.name }}{% endblock %}
 {% block content %}
 
 <section class="page-head page-head-compact">
   <div class="container">
-    <p class="eyebrow eyebrow-on-dark">Reviewer · Abstract Round</p>
+    <p class="eyebrow eyebrow-on-dark">Reviewer · Review feedback</p>
     <h1 class="display display-on-dark">{{ sub.title }}</h1>
-    <p class="page-head-sub">Decide Selected for the Selection Round or Not Selected. Your feedback is shown to the student.</p>
+    <p class="page-head-sub">Leave feedback for the author. Every submission advances — the final decision comes later, after the final-submission window.</p>
   </div>
 </section>
 
 <section class="form-section">
   <div class="container review-grid">
     <div class="panel review-sub">
-      <div class="review-meta">
-        {{ ui.type_badge(sub.format) }}
-        <span class="badge badge-type">{{ sub.theme }} · {{ ui.theme_name(sub.theme, config.themes) }}</span>
-        {{ ui.round_badge(1) }}
-      </div>
-      <h2 class="review-head">Submission</h2>
-      <dl class="reg-dl">
-        <dt>Student</dt><dd>{{ (students.get(sub.user_id) or {}).get("name", "—") or "—" }}</dd>
-        <dt>Email</dt><dd>{{ (students.get(sub.user_id) or {}).get("email", "—") or "—" }}</dd>
-        <dt>Submitted</dt><dd>{{ (sub.created_at or "")[:10] }}</dd>
-      </dl>
-      <h3 class="review-head">Abstract</h3>
-      <p class="review-abstract">{{ sub.description }}</p>
+      {{ ui.submission_detail(sub, students, themes) }}
     </div>
 
     <div class="panel form-card review-form">
@@ -34,18 +22,15 @@
       <form method="post" action="/reviewer/review/{{ sub.id }}" novalidate>
         {{ ui.csrf_field() }}
         <fieldset class="form-block">
-          <legend class="form-legend">Your decision</legend>
-          <div class="form-actions form-actions-stack">
-            <button class="btn btn-primary btn-lg btn-block" type="submit" name="decision" value="r1_selected">Selected for the Selection Round</button>
-            <button class="btn btn-danger btn-lg btn-block" type="submit" name="decision" value="r1_not_selected"
-                    onclick="return confirm('Not selected ends this submission. Continue?')">Not selected</button>
+          <legend class="form-legend">Review feedback</legend>
+          <div class="field">
+            <label for="feedback">Feedback (shown to the student)</label>
+            <textarea id="feedback" name="feedback" rows="8" maxlength="2000"
+                      placeholder="How the paper could be improved, or what to address in the revised version…" required>{{ values.feedback or "" }}</textarea>
           </div>
         </fieldset>
-        <div class="field">
-          <label for="comment">Feedback (shown to the student)</label>
-          <textarea id="comment" name="comment" rows="8" maxlength="1000" placeholder="Why it moves forward, or how it could be improved…" required>{{ values.comment or "" }}</textarea>
-        </div>
         <div class="form-actions">
+          <button class="btn btn-primary btn-lg" type="submit">Save feedback</button>
           <a class="btn btn-ghost btn-lg" href="/reviewer/dashboard">Cancel</a>
         </div>
       </form>

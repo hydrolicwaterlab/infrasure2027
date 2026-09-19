@@ -277,16 +277,16 @@
         <p class="eyebrow"><span class="eyebrow-num">05</span> — Call for Contributions</p>
         <h2 class="display display-on-dark">Share your research.<br />Shape resilient infrastructure.</h2>
         <p class="submit-lead">Present at {{ config.name }}</p>
-        <p class="submit-lead">PPT or Poster, up to 2 per student.</p>
+        <p class="submit-lead">Full Paper or Extended Abstract — submit as many as you like.</p>
         <div class="submit-cta">
-          {% if site_state.round1_open %}
+          {% if site_state.paper_submission_open %}
             <a class="btn btn-accent btn-lg" href="/registerinfrasure">Submit your work <span aria-hidden="true">&rarr;</span></a>
           {% else %}
             <a class="btn btn-accent btn-lg btn-disabled-temp" href="/register" title="Submissions will open soon" aria-disabled="true" tabindex="-1">Submit your work <span aria-hidden="true">&rarr;</span></a>
           {% endif %}
         </div>
-        {% if site_state.round1_open %}
-          <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.75);">Abstract Round submissions are open — create an account and apply</p>
+        {% if site_state.paper_submission_open %}
+          <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.75);">Paper submissions are open — create an account and submit your paper</p>
         {% else %}
           <p class="register-soon-note" style="margin-top:10px; color: rgba(255,255,255,.75);">Submissions will open soon</p>
         {% endif %}
@@ -312,12 +312,12 @@
       <li class="step">
         <span class="step-num">02</span>
         <h3>Submit</h3>
-        <p>Apply with a PPT or Poster on any of the 9 themes</p>
+        <p>Submit a Full Paper or Extended Abstract on any of the 9 themes</p>
       </li>
       <li class="step">
         <span class="step-num">03</span>
         <h3>Review</h3>
-        <p>Theme incharge reviews &amp; decides Selected / Not Selected</p>
+        <p>Get feedback, revise, then a Selected / Not Selected decision</p>
       </li>
     </ol>
   </div>
@@ -332,6 +332,7 @@
     </header>
 
     <!-- submission journey timeline -->
+    <h3 class="mini-head">Key dates</h3>
     <ol class="milestones">
       {% for m in config.cfp_timeline %}
       <li class="milestone">
@@ -340,12 +341,6 @@
         <p class="milestone-date{% if not m.date %} tba{% endif %}">{{ m.date or "To be announced" }}</p>
       </li>
       {% endfor %}
-      <li class="milestone milestone--hi">
-        <span class="milestone-node" aria-hidden="true">{{ "%02d"|format(config.cfp_timeline|length + 1) }}</span>
-        <h3 class="milestone-label">Conference</h3>
-        <p class="milestone-date">{{ config.dates }}</p>
-        <p class="milestone-venue"><a class="venue-link" href="https://maps.app.goo.gl/BjHd6vmrG3pqUPKG9" target="_blank" rel="noopener noreferrer" title="Open venue location in Google Maps">{{ config.venue }}</a></p>
-      </li>
     </ol>
 
     <!-- Registration fees -->

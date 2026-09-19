@@ -6,6 +6,10 @@ from fastapi.templating import Jinja2Templates
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Countries billed at the INR (domestic) registration rate. Everyone else pays
+# the Foreign Delegate (USD) rate.
+INR_COUNTRIES = ("India", "Nepal", "Bhutan", "Sri Lanka")
+
 SITE_CONFIG = {
     "name": "INFRASURE 2027",
     "short_title": "INFRASURE 2027",
@@ -17,6 +21,7 @@ SITE_CONFIG = {
     "convener": "Prof. Manish Pandey",
     "email": "infrasure2027@civil.iitkgp.ac.in",
     "domain": "Sustainable Development",
+    "countries": list(INR_COUNTRIES),
     "about_headline": (
         "A high-energy, idea-driven forum where science meets practice, "
         "technology meets policy, and innovation meets responsibility."
@@ -229,32 +234,31 @@ SITE_CONFIG = {
     ],
 
     "submit_rules": [
-        "Submit to the Abstract Round with a title and abstract only",
-        "Up to 2 submissions per student — any combination of PPT and Poster",
+        "Submit a Full Paper or Extended Abstract as a PDF, with a title and author list",
+        "No limit on the number of submissions — submit as many as you like",
         "Pick any of the 9 themes — it's your choice",
-        "Each submission is judged in the Abstract Round (Selected for the Selection Round / Not Selected), then you choose PPT or Poster",
-        "Selection Round: Poster teams submit a revised title and abstract; PPT teams upload a PDF of their work",
-        "A final decision — Selected or Not Selected — ends the review process for that submission",
+        "Every submission receives feedback from the review team, then you may submit a final version",
+        "A final decision — Selected or Not Selected — is made after the final submission",
+        "If selected, choose PPT or Poster and confirm which papers you will present",
     ],
     "max_pdf_mb": 25,
     "registration_fees": {
         "note": "Early bird registration closes 30 Dec 2026. Spot registration thereafter.",
+        "early_bird_until": "2026-12-30",
         "categories": [
-            {"label": "Student", "early": "₹2,000", "spot": "₹3,000"},
-            {"label": "Faculty / Academic", "early": "₹2,000", "spot": "₹3,000"},
-            {"label": "Delegate", "early": "₹6,000", "spot": "₹8,000"},
-            {"label": "Foreign Delegate", "early": "$150", "spot": "$200"},
-            {"label": "Accompanying Person", "early": "₹2,000", "spot": "₹2,000"},
+            {"label": "Student", "early": "₹2,000", "spot": "₹3,000", "early_value": 2000, "spot_value": 3000, "currency": "INR"},
+            {"label": "Faculty / Academic", "early": "₹2,000", "spot": "₹3,000", "early_value": 2000, "spot_value": 3000, "currency": "INR"},
+            {"label": "Delegate", "early": "₹6,000", "spot": "₹8,000", "early_value": 6000, "spot_value": 8000, "currency": "INR"},
+            {"label": "Foreign Delegate", "early": "$150", "spot": "$200", "early_value": 150, "spot_value": 200, "currency": "USD"},
+            {"label": "Accompanying Person", "early": "₹2,000", "spot": "₹2,000", "early_value": 2000, "spot_value": 2000, "currency": "INR"},
         ],
     },
     "cfp_timeline": [
-        {"label": "Abstract submission open", "date": "10 Sep 2026"},
-        {"label": "Abstract submission closes", "date": "15 Oct 2026"},
-        {"label": "Acceptance of abstract", "date": "30 Oct 2026"},
-        {"label": "Full paper submission", "date": "30 Nov 2026"},
-        {"label": "Paper review outcomes", "date": "10 Dec 2026"},
-        {"label": "Final paper submission", "date": "20 Dec 2026"},
-        {"label": "Early bird registration", "date": "30 Dec 2026"},
+        {"label": "Submission opens", "date": "10 Sep 2026"},
+        {"label": "Submission closes", "date": "15 Oct 2026"},
+        {"label": "Review outcomes", "date": "10 Dec 2026"},
+        {"label": "Final submission", "date": "20 Dec 2026"},
+        {"label": "Early bird registration", "date": "31 Dec 2026"},
     ],
     "gallery": [
         {"src": "/media/img1.jpeg", "alt": "INFRASURE event image 1"},
@@ -461,6 +465,7 @@ SITE_CONFIG = {
         "Prof. Domenico Santoro, USA",
         "Prof. Huu-Tai Thai, Australia",
         "Dr. Hrishikesh Chandra Gautam, USA",
+        "Prof. Huu-Tai Thai, Australia",
         "Prof. J. N. Reddy, USA",
         "Prof. Juliana B. Jalaludin, Malaysia",
         "Prof. Ludovic Leclercq, France",
@@ -481,10 +486,12 @@ SITE_CONFIG = {
         "Prof. Basudev Biswal, IITB",
         "Mr. Bhavay Sharma, WRI",
         "Prof. Bimlesh Kumar, IITG",
-        "Dr. C. Ravi Shekhar, CRRI",
+        "Prof. Brijesh Kumar Yadav, IITR",
+        "Dr. C. Ravi Sekhar, CRRI",
         "Prof. C. S. P. Ojha, IITR",
         "Prof. C. V. R. Murty, IITM",
         "Prof. D. Nagesh Kumar, IISc",
+        "Prof. D. R. Sahoo, IITD",
         "Prof. Deepankar Choudhury, IITB",
         "Prof. Dipti Ranjan Sahoo, IITD",
         "Prof. G. V. Ramana, IITD",
@@ -495,12 +502,14 @@ SITE_CONFIG = {
         "Prof. Lekshmi Mohan V",
         "Prof. Lelitha Devi Vanajakshi, IITM",
         "Prof. M. Parida, IITR",
+        "Prof. M. Sekhar, IISc",
         "Prof. Manish Goyal, IITI",
         "Prof. N V Umamahesh, NITW",
         "Prof. Narasamma Nippatlapalli, IITT",
         "Prof. P. K. Sharma, IITR",
         "Prof. P. L. Patel, VNIT",
         "Dr. Pankaj K Gupta, Jal Shakti",
+        "Prof. Pankaj Kumar Roy, JU",
         "Prof. Pradeep K. Ramancharla, CBRI",
         "Prof. Praveen Kumar, IITR",
         "Prof. Rajib K. Bhattacharjya, IITG",
@@ -514,6 +523,7 @@ SITE_CONFIG = {
         "Prof. Shiva Nagendra SM, IITM",
         "Prof. Shriniwas Arkatkar, SVNIT",
         "Prof. Sireesh S, IITH",
+        "Prof. Soumendra Nath Kuiry, IITM",
         "Prof. Subashisa Dutta, IITG",
         "Prof. Subhadeep Banerjee, IITM",
         "Prof. Sudipta Sarkar, IITR",

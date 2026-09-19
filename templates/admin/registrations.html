@@ -36,7 +36,7 @@
                         {% if r.supervisor_name %}<br/><small class="cell-sub">Supervisor: {{ r.supervisor_name }}</small>{% endif %}
                       {% elif r.participant_category == "Academic" %}
                         <small class="cell-sub">{{ r.academic_role }}{% if r.professor_type %} · {{ r.professor_type }}{% endif %}</small>
-                      {% elif r.participant_category == "Industry" %}
+                      {% elif r.participant_category in ["Industry", "Others"] %}
                         <small class="cell-sub">{{ r.position }}</small>
                       {% endif %}
                     {% else %}
@@ -109,8 +109,8 @@
                   <dt>Zip / Postal code</dt><dd>{{ r.institute_zipcode or "—" }}</dd>
                   <dt>Institute email</dt><dd>{{ r.institute_email or "—" }}{% if r.verified_institute_email %} <span class="badge badge-selected">Verified</span>{% endif %}</dd>
                 </dl>
-              {% elif r.participant_category == "Industry" %}
-                <h3 class="reg-modal-head">Industry details</h3>
+              {% elif r.participant_category in ["Industry", "Others"] %}
+                <h3 class="reg-modal-head">Industry / Other details</h3>
                 <dl class="reg-dl">
                   <dt>Company</dt><dd>{{ r.company_name or "—" }}</dd>
                   <dt>Position</dt><dd>{{ r.position or "—" }}</dd>

@@ -1,40 +1,44 @@
-"""Student routes — dashboard, threads (round 1 apply/edit), format choice, round 2 content, info, payment."""
+"""Student routes — dashboard, participant info, paper submission, revision, presentation choice, payment."""
 import re
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 
 from app_routes.schemas import (
-    MAX_SUBMISSIONS,
+    PAPER_TYPES,
     AttendanceForm,
-    FormatChoiceForm,
-    RoundTwoForm,
-    SubmissionForm,
+    PaperSubmissionForm,
+    PresentationChoiceForm,
+    Round2Form,
     validate,
 )
 from app_routes.service import (
-    create_round1,
     current_view,
     has_selected_submission,
     info_complete,
     now,
+    paper_view,
+    payable_amount,
     payment_eligible,
+    presenting_count,
+    presenting_submissions,
     registration_for,
-    round2_view,
-    round1_view,
+    set_presentation,
     site_flag,
     student_threads,
     students_map,
-    submit_round2_content,
-    thread_count,
-    upload_round2_pdf,
+    submit_paper,
+    submit_round2,
+    update_paper,
 )
 from app_routes.utils import flash_response, flash_text, render, render_msg
 from auth import require_role
 from db import insert, one, update
 from otp import latest_otp_payload, send_otp, verify_otp
 
-router = APIRouter(prefix="/student")
+router = APIRouter(prefix="/participant")
+
+PAPER_TYPE_LABELS = {"full_paper": "Full Paper", "extended_abstract": "Extended Abstract"}
 
 
 def _split_phone(v: str) -> tuple[str, str]:
@@ -95,8 +99,8 @@ def _render_info_with_otp(request, user, reg, values, email, otp_error=None, fla
         otp_email=email,
         otp_purpose="institute",
         otp_purpose_label="verify your institute email",
-        otp_resend_url="/student/info",
-        otp_action="/student/verifyotp",
+        otp_resend_url="/participant/info",
+        otp_action="/participant/verifyotp",
     )
     if otp_error:
         ctx["otp_error"] = otp_error
@@ -106,19 +110,35 @@ def _render_info_with_otp(request, user, reg, values, email, otp_error=None, fla
 
 
 def _owned_submission(user: dict, sid: str):
-    """Any of the student's own submissions, regardless of status."""
+    """Any of the student's own papers, regardless of status."""
     sub = one("submissions", id=sid)
     if not sub or sub["user_id"] != user["id"]:
-        return None, flash_response("/student/dashboard", "submission_not_found")
+        return None, flash_response("/participant/dashboard", "submission_not_found")
     return sub, None
+
+
+def _authors_from_form(form_data) -> list[dict]:
+    """Zip repeated author_* fields from a Starlette FormData into row dicts."""
+    names = form_data.getlist("author_name")
+    designations = form_data.getlist("author_designation")
+    affiliations = form_data.getlist("author_affiliation")
+    emails = form_data.getlist("author_email")
+    return [
+        {"name": n, "designation": d, "affiliation": a, "email": e}
+        for n, d, a, e in zip(names, designations, affiliations, emails)
+    ]
+
+
+def _paper_form_values(theme: str, paper_type: str, presentation_format: str,
+                       title: str, authors: list) -> dict:
+    return {"theme": theme, "paper_type": paper_type, "presentation_format": presentation_format,
+            "title": title, "authors": authors}
 
 
 @router.get("/dashboard")
 def dashboard(request: Request, user: dict = Depends(require_role("student"))):
     threads = [current_view(s) for s in student_threads(user)]
     reg = registration_for(user)
-    has_selected = has_selected_submission(user)
-    can_apply = info_complete(user) and thread_count(user) < MAX_SUBMISSIONS
     return render_msg(
         request,
         "student/dashboard.html",
@@ -126,10 +146,10 @@ def dashboard(request: Request, user: dict = Depends(require_role("student"))):
         user=user,
         threads=threads,
         reg=reg,
-        has_selected=has_selected,
-        can_apply=can_apply,
+        has_selected=has_selected_submission(user),
+        selected_count=sum(1 for s in threads if s["status"] == "selected"),
+        presenting_count=presenting_count(user),
         info_done=info_complete(user),
-        slots_left=max(0, MAX_SUBMISSIONS - len(threads)),
     )
 
 
@@ -138,10 +158,10 @@ def dashboard(request: Request, user: dict = Depends(require_role("student"))):
 @router.get("/info")
 def info_form(request: Request, user: dict = Depends(require_role("student"))):
     if not site_flag("registration_open"):
-        return flash_response("/student/dashboard", "registration_closed")
+        return flash_response("/participant/dashboard", "registration_closed")
     reg = registration_for(user)
     if reg and reg["status"] != "pending":
-        return flash_response("/student/dashboard", "attendance_locked")
+        return flash_response("/participant/dashboard", "attendance_locked")
     q = request.query_params
     if q.get("resend"):
         email = (q.get("otp_email") or "").strip().lower()
@@ -180,6 +200,7 @@ def info_submit(
     institute_name: str = Form(""),
     institute_address: str = Form(""),
     institute_country: str = Form(""),
+    institute_country_other: str = Form(""),
     institute_zipcode: str = Form(""),
     institute_email: str = Form(""),
     institute_email_same: str = Form(""),
@@ -192,16 +213,17 @@ def info_submit(
     company_email_same: str = Form(""),
     company_address: str = Form(""),
     company_country: str = Form(""),
+    company_country_other: str = Form(""),
     company_zipcode: str = Form(""),
     # legacy (hidden, for backward compat)
     designation: str = Form(""),
     affiliation: str = Form(""),
 ):
     if not site_flag("registration_open"):
-        return flash_response("/student/dashboard", "registration_closed")
+        return flash_response("/participant/dashboard", "registration_closed")
     reg = registration_for(user)
     if reg and reg["status"] != "pending":
-        return flash_response("/student/dashboard", "attendance_locked")
+        return flash_response("/participant/dashboard", "attendance_locked")
     code = (phone_country_code or "").strip() or "+91"
     local = (phone or "").strip()
     phone_full = f"{code} {local}".strip()
@@ -214,6 +236,7 @@ def info_submit(
         "degree_name": degree_name, "department": department,
         "institute_name": institute_name, "institute_address": institute_address,
         "institute_country": institute_country, "institute_zipcode": institute_zipcode,
+        "institute_country_other": institute_country_other,
         "institute_email": institute_email, "institute_email_same": institute_email_same,
         "supervisor_name": supervisor_name,
         "academic_role": academic_role, "professor_type": professor_type,
@@ -221,6 +244,7 @@ def info_submit(
         "company_email": company_email, "company_email_same": company_email_same,
         "company_address": company_address,
         "company_country": company_country, "company_zipcode": company_zipcode,
+        "company_country_other": company_country_other,
         "account_email": user["email"],
         "designation": designation, "affiliation": affiliation,
     }
@@ -249,12 +273,12 @@ def info_submit(
     fields["verified_institute_email"] = form.institute_email
     if reg:
         update("registrations", reg["id"], fields)
-        return flash_response("/student/dashboard", "attendance_updated")
+        return flash_response("/participant/dashboard", "attendance_updated")
     insert("registrations", {
         "user_id": user["id"], **fields,
         "status": "pending", "fee_paid": False, "created_at": now(),
     }, prefix="r")
-    return flash_response("/student/dashboard", "attendance_created")
+    return flash_response("/participant/dashboard", "attendance_created")
 
 
 @router.post("/verifyotp")
@@ -266,20 +290,20 @@ def verify_institute_otp(
     code: str = Form(""),
 ):
     if not site_flag("registration_open"):
-        return flash_response("/student/dashboard", "registration_closed")
+        return flash_response("/participant/dashboard", "registration_closed")
     if purpose != "institute":
-        return flash_response("/student/info", "otp_missing")
+        return flash_response("/participant/info", "otp_missing")
     email = (email or "").strip().lower()
     reg = registration_for(user)
     if reg and reg["status"] != "pending":
-        return flash_response("/student/dashboard", "attendance_locked")
+        return flash_response("/participant/dashboard", "attendance_locked")
     ok, err, payload = verify_otp(email, "institute", code)
     if not ok:
         saved = latest_otp_payload(email, "institute")
         return _render_info_with_otp(request, user, reg, saved.get("values", {}), email,
                                      otp_error=flash_text(err)["error"])
     if not payload or payload.get("user_id") != user["id"]:
-        return flash_response("/student/info", "otp_missing")
+        return flash_response("/participant/info", "otp_missing")
     fields = payload.get("values", {})
     fields["verified_institute_email"] = fields.get("institute_email", "")
     if reg:
@@ -289,42 +313,53 @@ def verify_institute_otp(
             "user_id": user["id"], **fields,
             "status": "pending", "fee_paid": False, "created_at": now(),
         }, prefix="r")
-    return flash_response("/student/dashboard", "institute_verified")
+    return flash_response("/participant/dashboard", "institute_verified")
 
 
-# ---------- round 1 ----------
+# ---------- paper submission (round 1) ----------
 
 @router.get("/apply")
-def apply_form(request: Request, user: dict = Depends(require_role("student"))):
-    if not site_flag("round1_open"):
-        return flash_response("/student/dashboard", "round1_closed")
+def apply_form(request: Request, user: dict = Depends(require_role("student")), type: str = ""):
+    if not site_flag("paper_submission_open"):
+        return flash_response("/participant/dashboard", "paper_closed")
     if not info_complete(user):
-        return flash_response("/student/info", "info_required")
-    if thread_count(user) >= MAX_SUBMISSIONS:
-        return flash_response("/student/dashboard", "submissions_full")
-    return render(request, "student/round1_form.html", mode="create", values={}, user=user)
+        return flash_response("/participant/info", "info_required")
+    if type not in PAPER_TYPES:
+        return render(request, "student/paper_type.html", user=user)
+    return render(request, "student/paper_form.html", mode="create",
+                  values=_paper_form_values("", type, "", "", [{}]), user=user)
 
 
 @router.post("/apply")
-def apply_submit(
+async def apply_submit(
     request: Request,
     user: dict = Depends(require_role("student")),
+    paper_type: str = Form(""),
+    presentation_format: str = Form(""),
     theme: str = Form(""),
     title: str = Form(""),
-    description: str = Form(""),
+    file: UploadFile | None = File(None),
 ):
-    if not site_flag("round1_open"):
-        return flash_response("/student/dashboard", "round1_closed")
+    if not site_flag("paper_submission_open"):
+        return flash_response("/participant/dashboard", "paper_closed")
     if not info_complete(user):
-        return flash_response("/student/info", "info_required")
-    if thread_count(user) >= MAX_SUBMISSIONS:
-        return flash_response("/student/dashboard", "submissions_full")
-    data = {"theme": theme, "title": title, "description": description}
-    form, errors = validate(SubmissionForm, data)
+        return flash_response("/participant/info", "info_required")
+    form_data = await request.form()
+    authors = _authors_from_form(form_data)
+    data = _paper_form_values(theme, paper_type, presentation_format, title, authors)
+    form, errors = validate(PaperSubmissionForm, data)
+    data_bytes = await file.read() if file is not None else b""
+    if form and not data_bytes:
+        errors = ["Please upload your paper as a PDF file."]
     if errors:
-        return render(request, "student/round1_form.html", mode="create", values=data, errors=errors, user=user)
-    create_round1(user, form.theme, form.title, form.description)
-    return flash_response("/student/dashboard", "r1_created")
+        return render(request, "student/paper_form.html", mode="create", values=data,
+                      errors=errors, user=user)
+    _, e = submit_paper(user, form.theme, form.paper_type, form.presentation_format,
+                        form.title, form.authors,
+                        file.filename if file else "submission.pdf", data_bytes)
+    if e:
+        return flash_response("/participant/apply?type=" + form.paper_type, e)
+    return flash_response("/participant/dashboard", "paper_submitted")
 
 
 @router.get("/edit/{sid}")
@@ -332,41 +367,48 @@ def edit_form(request: Request, sid: str, user: dict = Depends(require_role("stu
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if not site_flag("round1_open"):
-        return flash_response("/student/dashboard", "round1_closed")
-    if sub["r1_status"] != "r1_pending":
-        return flash_response("/student/dashboard", "submission_locked")
-    return render(request, "student/round1_form.html", mode="edit", sub=sub,
-                  values=round1_view(sub), user=user)
+    if not site_flag("paper_submission_open"):
+        return flash_response("/participant/dashboard", "paper_closed")
+    if sub["status"] != "submitted":
+        return flash_response("/participant/dashboard", "submission_locked")
+    values = _paper_form_values(sub.get("theme", ""), sub.get("paper_type", ""),
+                                sub.get("presentation_format", ""),
+                                sub.get("title", ""), sub.get("authors") or [{}])
+    return render(request, "student/paper_form.html", mode="edit", sub=paper_view(sub),
+                  values=values, user=user)
 
 
 @router.post("/edit/{sid}")
-def edit_submit(
+async def edit_submit(
     request: Request,
     sid: str,
     user: dict = Depends(require_role("student")),
+    paper_type: str = Form(""),
+    presentation_format: str = Form(""),
     theme: str = Form(""),
     title: str = Form(""),
-    description: str = Form(""),
+    file: UploadFile | None = File(None),
 ):
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if not site_flag("round1_open"):
-        return flash_response("/student/dashboard", "round1_closed")
-    if sub["r1_status"] != "r1_pending":
-        return flash_response("/student/dashboard", "submission_locked")
-    data = {"theme": theme, "title": title, "description": description}
-    form, errors = validate(SubmissionForm, data)
+    if not site_flag("paper_submission_open"):
+        return flash_response("/participant/dashboard", "paper_closed")
+    if sub["status"] != "submitted":
+        return flash_response("/participant/dashboard", "submission_locked")
+    form_data = await request.form()
+    authors = _authors_from_form(form_data)
+    data = _paper_form_values(theme, paper_type, presentation_format, title, authors)
+    form, errors = validate(PaperSubmissionForm, data)
     if errors:
-        return render(request, "student/round1_form.html", mode="edit", sub=sub,
+        return render(request, "student/paper_form.html", mode="edit", sub=paper_view(sub),
                       values=data, errors=errors, user=user)
-    update("submissions", sid, {
-        "theme": form.theme,
-        "title_r1": form.title,
-        "description_r1": form.description,
-    })
-    return flash_response("/student/dashboard", "submission_updated")
+    data_bytes = await file.read() if file is not None and file.filename else None
+    _, e = update_paper(user, sid, form.presentation_format, form.title, form.authors,
+                        file.filename if (file and data_bytes) else None, data_bytes)
+    if e:
+        return flash_response(f"/participant/edit/{sid}", e)
+    return flash_response("/participant/dashboard", "paper_updated")
 
 
 @router.get("/submission/{sid}")
@@ -374,200 +416,130 @@ def submission_detail(request: Request, sid: str, user: dict = Depends(require_r
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    return render(request, "student/submission.html", user=user, sub=current_view(sub),
+    return render(request, "student/submission.html", user=user, sub=paper_view(sub),
                   students=students_map())
 
 
-# ---------- round 2: format choice then content (poster form / ppt PDF) ----------
+# ---------- round 2 submission (after feedback) ----------
 
-def _r2_access_err(sub: dict) -> str | None:
-    """Return a flash code if Round-2 content can't be submitted yet, else None."""
-    if not site_flag("round1_results_declared"):
-        return "round1_results_not_declared"
-    if not site_flag("round2_open"):
-        return "round2_closed"
-    if sub["r1_status"] != "r1_selected":
-        return "round2_not_ready"
-    if sub.get("r2_status") in ("r2_under_review", "selected", "not_selected"):
-        return "content_locked"
-    return None
-
-
-@router.get("/submission/{sid}/round2")
-def round2_choice(request: Request, sid: str, user: dict = Depends(require_role("student"))):
+@router.get("/round2/{sid}")
+def round2_form(request: Request, sid: str, user: dict = Depends(require_role("student"))):
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if not site_flag("round1_results_declared"):
-        return flash_response(f"/student/submission/{sid}", "round1_results_not_declared")
-    if not site_flag("round2_open"):
-        return flash_response(f"/student/submission/{sid}", "round2_closed")
-    if sub["r1_status"] != "r1_selected":
-        return flash_response(f"/student/submission/{sid}", "round2_not_ready")
-    # The format is only fixed once content is submitted; until then let the student re-choose.
-    if sub.get("r2_status"):
-        target = "content" if sub.get("format") == "poster" else "upload"
-        return RedirectResponse(f"/student/submission/{sid}/round2/{target}", status_code=303)
-    return render(request, "student/round2_choice.html", user=user, sub=round1_view(sub),
-                  values={"format": ""}, errors=None, students=students_map())
+    if sub["status"] != "feedback_released":
+        return flash_response(f"/participant/submission/{sid}", "round2_not_ready")
+    if not site_flag("final_submission_open"):
+        return flash_response(f"/participant/submission/{sid}", "round2_closed")
+    values = {"authors": sub.get("authors") or [{}]}
+    return render(request, "student/round2_form.html", user=user, sub=paper_view(sub),
+                  values=values, students=students_map())
 
 
-@router.post("/submission/{sid}/round2")
-def round2_choose(
+@router.post("/round2/{sid}")
+async def round2_submit(
     request: Request,
     sid: str,
     user: dict = Depends(require_role("student")),
-    format: str = Form(""),
+    file: UploadFile | None = File(None),
 ):
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if not site_flag("round1_results_declared"):
-        return flash_response(f"/student/submission/{sid}", "round1_results_not_declared")
-    if not site_flag("round2_open"):
-        return flash_response(f"/student/submission/{sid}", "round2_closed")
-    if sub["r1_status"] != "r1_selected":
-        return flash_response(f"/student/submission/{sid}", "round2_not_ready")
-    if sub.get("r2_status"):
-        return flash_response(f"/student/submission/{sid}", "content_locked")
-    form, errors = validate(FormatChoiceForm, {"format": format})
-    if errors:
-        return render(request, "student/round2_choice.html", user=user, sub=round1_view(sub),
-                      values={"format": format}, errors=errors, students=students_map())
-    # Nothing is saved yet — the format is committed when content is submitted.
-    target = "content" if form.format == "poster" else "upload"
-    return RedirectResponse(f"/student/submission/{sid}/round2/{target}", status_code=303)
-
-
-# ----- poster: revised title + abstract -----
-
-@router.get("/submission/{sid}/round2/content")
-def round2_content_form(request: Request, sid: str, user: dict = Depends(require_role("student"))):
-    sub, redir = _owned_submission(user, sid)
-    if redir:
-        return redir
-    if sub.get("r2_status") and sub.get("format") == "ppt":
-        return RedirectResponse(f"/student/submission/{sid}/round2/upload", status_code=303)
-    err = _r2_access_err(sub)
-    if err:
-        return flash_response(f"/student/submission/{sid}", err)
-    return render(request, "student/round2_content.html", user=user, sub=round2_view(sub),
-                  chosen_format="poster",
-                  values={"title": sub.get("title_r2") or "", "description": sub.get("description_r2") or "",
-                          "authors": sub.get("selection_round_authors") or []},
-                  errors=None, students=students_map())
-
-
-def _authors_from_form(form_data) -> list[dict]:
-    """Zip repeated author_* fields from a Starlette FormData into row dicts."""
-    names = form_data.getlist("author_name")
-    designations = form_data.getlist("author_designation")
-    affiliations = form_data.getlist("author_affiliation")
-    emails = form_data.getlist("author_email")
-    return [
-        {"name": n, "designation": d, "affiliation": a, "email": e}
-        for n, d, a, e in zip(names, designations, affiliations, emails)
-    ]
-
-
-@router.post("/submission/{sid}/round2/content")
-async def round2_content_submit(
-    request: Request,
-    sid: str,
-    user: dict = Depends(require_role("student")),
-    title: str = Form(""),
-    description: str = Form(""),
-):
-    sub, redir = _owned_submission(user, sid)
-    if redir:
-        return redir
-    if sub.get("r2_status") and sub.get("format") == "ppt":
-        return flash_response(f"/student/submission/{sid}", "bad_format")
-    err = _r2_access_err(sub)
-    if err:
-        return flash_response(f"/student/submission/{sid}", err)
+    if sub["status"] != "feedback_released":
+        return flash_response(f"/participant/submission/{sid}", "round2_not_ready")
+    if not site_flag("final_submission_open"):
+        return flash_response(f"/participant/submission/{sid}", "round2_closed")
     form_data = await request.form()
     authors = _authors_from_form(form_data)
-    data = {"title": title, "description": description, "authors": authors}
-    form, errors = validate(RoundTwoForm, data)
+    form, errors = validate(Round2Form, {"authors": authors})
     if errors:
-        return render(request, "student/round2_content.html", user=user, sub=round2_view(sub),
-                      chosen_format="poster", values=data, errors=errors, students=students_map())
-    _, e = submit_round2_content(user, sid, form.title, form.description, form.authors)
+        return render(request, "student/round2_form.html", user=user, sub=paper_view(sub),
+                      values={"authors": authors}, errors=errors, students=students_map())
+    data_bytes = await file.read() if file is not None and file.filename else None
+    _, e = submit_round2(user, sid, form.authors,
+                         file.filename if (file and data_bytes) else None, data_bytes)
     if e:
-        return flash_response(f"/student/submission/{sid}", e)
-    return flash_response(f"/student/submission/{sid}", "r2_content_saved")
+        return flash_response(f"/participant/round2/{sid}", e)
+    return flash_response(f"/participant/submission/{sid}", "round2_submitted")
 
 
-# ----- ppt: PDF upload -----
+# ---------- presentation choice (after selection) ----------
 
-@router.get("/submission/{sid}/round2/upload")
-def round2_upload_form(request: Request, sid: str, user: dict = Depends(require_role("student"))):
+@router.get("/submission/{sid}/present")
+def present_form(request: Request, sid: str, user: dict = Depends(require_role("student"))):
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if sub.get("r2_status") and sub.get("format") == "poster":
-        return RedirectResponse(f"/student/submission/{sid}/round2/content", status_code=303)
-    err = _r2_access_err(sub)
-    if err:
-        return flash_response(f"/student/submission/{sid}", err)
-    return render(request, "student/round2_upload.html", user=user, sub=round2_view(sub),
-                  chosen_format="ppt", errors=None, students=students_map())
+    if sub["status"] != "selected":
+        return flash_response(f"/participant/submission/{sid}", "not_selected_yet")
+    if not site_flag("results_declared"):
+        return flash_response(f"/participant/submission/{sid}", "results_not_declared")
+    values = {"presenting": "on" if sub.get("presenting") else ""}
+    return render(request, "student/presentation.html", user=user, sub=paper_view(sub),
+                  values=values)
 
 
-@router.post("/submission/{sid}/round2/upload")
-async def round2_upload_submit(
+@router.post("/submission/{sid}/present")
+def present_submit(
     request: Request,
     sid: str,
     user: dict = Depends(require_role("student")),
-    file: UploadFile = File(...),
+    presenting: str = Form(""),
 ):
     sub, redir = _owned_submission(user, sid)
     if redir:
         return redir
-    if sub.get("r2_status") and sub.get("format") == "poster":
-        return flash_response(f"/student/submission/{sid}", "bad_format")
-    err = _r2_access_err(sub)
-    if err:
-        return flash_response(f"/student/submission/{sid}", err)
-    data = await file.read()
-    _, e = upload_round2_pdf(user, sid, file.filename or "submission.pdf", data)
+    if sub["status"] != "selected":
+        return flash_response(f"/participant/submission/{sid}", "not_selected_yet")
+    if not site_flag("results_declared"):
+        return flash_response(f"/participant/submission/{sid}", "results_not_declared")
+    is_presenting = (presenting or "").strip().lower() in ("on", "true", "1", "yes")
+    data = {"presenting": presenting}
+    form, errors = validate(PresentationChoiceForm, data)
+    if errors:
+        return render(request, "student/presentation.html", user=user, sub=paper_view(sub),
+                      values=data, errors=errors)
+    _, e = set_presentation(user, sid, is_presenting)
     if e:
-        return flash_response(f"/student/submission/{sid}/round2/upload", e)
-    return flash_response(f"/student/submission/{sid}", "r2_uploaded")
+        return flash_response(f"/participant/submission/{sid}/present", e)
+    return flash_response(f"/participant/submission/{sid}", "presentation_saved")
 
 
-# ---------- payment (requires final selection + declared results + open phase + approved info) ----------
+# ---------- payment (deferred; amount announced later) ----------
+
+def _payment_gate(user: dict):
+    """Shared payment checks. Returns (reg, flash_code | None)."""
+    if not has_selected_submission(user):
+        return None, "need_selected"
+    if not site_flag("results_declared"):
+        return None, "results_not_declared"
+    if not site_flag("payment_open"):
+        return None, "payment_closed"
+    reg = registration_for(user)
+    if not reg:
+        return None, "payment_ready"
+    if not payment_eligible(reg):
+        return None, "admin_approval_required"
+    return reg, None
+
 
 @router.get("/payment")
 def payment_page(request: Request, user: dict = Depends(require_role("student"))):
-    if not has_selected_submission(user):
-        return flash_response("/student/dashboard", "need_selected")
-    if not site_flag("round2_results_declared"):
-        return flash_response("/student/dashboard", "round2_results_not_declared")
-    if not site_flag("payment_open"):
-        return flash_response("/student/dashboard", "payment_closed")
-    reg = registration_for(user)
-    if not reg:
-        return flash_response("/student/info", "payment_ready")
-    if not payment_eligible(reg):
-        return flash_response("/student/dashboard", "admin_approval_required")
+    reg, err = _payment_gate(user)
+    if err:
+        return flash_response("/participant/dashboard", err)
+    count, unit = payable_amount(user)
+    total_value = count * unit["value"] if unit else 0
     return render_msg(request, "student/payment.html", msg=request.query_params.get("msg"),
-                      user=user, reg=reg)
+                      user=user, reg=reg, presenting=presenting_submissions(user),
+                      count=count, unit=unit, total_value=total_value)
 
 
 @router.post("/payment")
 def payment_submit(request: Request, user: dict = Depends(require_role("student"))):
-    if not has_selected_submission(user):
-        return flash_response("/student/dashboard", "need_selected")
-    if not site_flag("round2_results_declared"):
-        return flash_response("/student/dashboard", "round2_results_not_declared")
-    if not site_flag("payment_open"):
-        return flash_response("/student/dashboard", "payment_closed")
-    reg = registration_for(user)
-    if not reg:
-        return flash_response("/student/info", "payment_ready")
-    if not payment_eligible(reg):
-        return flash_response("/student/dashboard", "admin_approval_required")
+    reg, err = _payment_gate(user)
+    if err:
+        return flash_response("/participant/dashboard", err)
     update("registrations", reg["id"], {"fee_paid": True})
-    return flash_response("/student/payment", "fee_paid_success")
+    return flash_response("/participant/payment", "fee_paid_success")

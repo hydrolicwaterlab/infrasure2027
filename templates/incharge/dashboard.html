@@ -17,51 +17,83 @@
       </p>
     </div>
     <div class="page-head-stats">
-      <span class="quick-stat"><strong>{{ subs | length }}</strong> shown</span>
-      <span class="quick-stat"><strong>{{ pending }}</strong> pending review</span>
-      <span class="quick-stat"><strong>{{ under_review }}</strong> under review</span>
+      <span class="quick-stat"><strong>{{ awaiting_feedback }}</strong> awaiting feedback</span>
+      <span class="quick-stat"><strong>{{ awaiting_round2 }}</strong> awaiting final submission</span>
+      <span class="quick-stat"><strong>{{ awaiting_final }}</strong> awaiting final decision</span>
     </div>
   </div>
 </section>
 
 <section class="dash-section">
   <div class="container">
-    {{ ui.round_tabs("/incharge/dashboard", filters.round) }}
-    {{ ui.filter_form("/incharge/dashboard", themes, filters.theme, filters.status, filters.type, filters.round, show_round=False) }}
-    <div class="panel">
+    {{ ui.filter_form("/incharge/dashboard", themes, filters.theme, filters.status, filters.type, tab=active_tab) }}
+
+    {% set tabs = [("feedback", "Awaiting feedback", feedback_subs|length),
+                   ("round2", "Awaiting final submission", round2_subs|length),
+                   ("final", "Awaiting final decision", final_subs|length),
+                   ("decided", "Decided", done_subs|length)] %}
+    <div class="subnav tabs" role="tablist" aria-label="Submission stages" data-tabs>
+      {% for key, label, count in tabs %}
+        <button type="button" class="subnav-link {{ 'is-active' if active_tab == key }}" role="tab"
+                id="tab-{{ key }}" aria-controls="panel-{{ key }}"
+                aria-selected="{{ 'true' if active_tab == key else 'false' }}"
+                tabindex="{{ '0' if active_tab == key else '-1' }}" data-tab="{{ key }}">
+          {{ label }} <span class="tab-count">{{ count }}</span>
+        </button>
+      {% endfor %}
+    </div>
+
+    <div class="panel tab-panel" role="tabpanel" id="panel-feedback" aria-labelledby="tab-feedback"{% if active_tab != "feedback" %} hidden{% endif %}>
       <div class="panel-head">
-        <h2 class="panel-title">Pending{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
-        <p class="panel-sub">
-          {% if filters.round == 2 %}
-            Selection Round content that still needs a reviewer or your own decision.
-          {% else %}
-            Abstract Round submissions that still need a reviewer or your own decision.
-          {% endif %}
-        </p>
+        <h2 class="panel-title">Awaiting feedback{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
+        <p class="panel-sub">New papers that need a reviewer assigned, or feedback from you. Every paper advances — this is guidance, not a decision.</p>
       </div>
       {{ ui.subs_table(
-          pending_subs, themes,
-          "Nothing pending",
-          "Once a student applies under one of your themes, it appears here awaiting a decision.",
-          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission", round_no=filters.round, show_title=False) }}
+          feedback_subs, themes,
+          "Nothing awaiting feedback",
+          "Once a student submits under one of your themes, it appears here.",
+          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission", show_title=False) }}
     </div>
-    <div class="panel">
+
+    <div class="panel tab-panel" role="tabpanel" id="panel-round2" aria-labelledby="tab-round2"{% if active_tab != "round2" %} hidden{% endif %}>
       <div class="panel-head">
-        <h2 class="panel-title">Done{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
-        <p class="panel-sub">
-          {% if filters.round == 2 %}
-            Final decisions recorded for this round.
-          {% else %}
-            Submissions already decided for the Selection Round or Not Selected.
-          {% endif %}
-        </p>
+        <h2 class="panel-title">Awaiting final submission{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
+        <p class="panel-sub">Review feedback released. Waiting for the participant to click Submit for Final Review — no decision can be recorded until then.</p>
+      </div>
+      {{ ui.subs_table(
+          round2_subs, themes,
+          "Nobody is mid-submission",
+          "Papers whose feedback has been released appear here until the participant submits the final version.",
+          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission", show_title=False) }}
+    </div>
+
+    <div class="panel tab-panel" role="tabpanel" id="panel-final" aria-labelledby="tab-final"{% if active_tab != "final" %} hidden{% endif %}>
+      <div class="panel-head">
+        <h2 class="panel-title">Awaiting final decision{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
+        <p class="panel-sub">Final submission received. Record Selected or Not Selected — or let the assigned reviewer decide.</p>
+      </div>
+      {{ ui.subs_table(
+          final_subs, themes,
+          "Nothing awaiting a final decision",
+          "Papers submitted for final review appear here.",
+          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission", show_title=False) }}
+    </div>
+
+    <div class="panel tab-panel" role="tabpanel" id="panel-decided" aria-labelledby="tab-decided"{% if active_tab != "decided" %} hidden{% endif %}>
+      <div class="panel-head">
+        <h2 class="panel-title">Decided{% if filters.theme %} — {{ filters.theme }}{% endif %}</h2>
       </div>
       {{ ui.subs_table(
           done_subs, themes,
           "No decisions yet",
-          "Decisions you or your reviewers record will be listed here.",
-          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission", round_no=filters.round, show_title=False) }}
+          "Selected / Not Selected decisions will be listed here.",
+          "/incharge/dashboard", "Refresh", view_prefix="/incharge/submission", show_title=False) }}
     </div>
   </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/tabs.js" defer></script>
+<noscript><style>[role="tabpanel"][hidden]{display:block !important;}</style></noscript>
 {% endblock %}

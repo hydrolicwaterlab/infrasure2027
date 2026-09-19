@@ -54,7 +54,7 @@ Allow: /sponsorship
 
 # Disallow auth / private panels (noindex anyway)
 Disallow: /infrasureadmin/
-Disallow: /student/
+Disallow: /participant/
 Disallow: /infrasureincharge/
 Disallow: /infrasurereviewer/
 Disallow: /pdf/

@@ -8,10 +8,9 @@
     <p class="eyebrow eyebrow-on-dark">Submission · {{ sub.id }}</p>
     <h1 class="display display-on-dark">{{ sub.title }}</h1>
     <p class="page-head-sub">
-      {{ ui.type_badge(sub.format) }}
+      {{ ui.paper_type_badge(sub.paper_type) }}
       <span class="badge badge-type">{{ sub.theme }} · {{ ui.theme_name(sub.theme, config.themes) }}</span>
-      {{ ui.round_badge(1) }}{% if sub.r2_status %}{{ ui.round_badge(2) }}{% endif %}
-      {% if sub.r2_status %}{{ ui.status_badge(sub.r2_status) }}{% else %}{{ ui.status_badge(sub.r1_status) }}{% endif %}
+      {{ ui.status_badge(sub.status) }}
     </p>
   </div>
 </section>
@@ -24,37 +23,34 @@
 
     <div class="panel form-card review-form">
       <h2 class="panel-title">Actions</h2>
-      {% if sub.r2_status %}
-        <div class="round-tabs round-tabs-sm" role="tablist" aria-label="Submission round">
-          <a role="tab" class="round-tab {{ 'is-active' if round_no == 1 }}" href="/incharge/submission/{{ sub.id }}?round=1">Abstract Round</a>
-          <a role="tab" class="round-tab {{ 'is-active' if round_no == 2 }}" href="/incharge/submission/{{ sub.id }}?round=2">Selection Round</a>
-        </div>
-      {% endif %}
-      {% if round_no == 2 %}
-        {% if sub.r2_status == "r2_pending" %}
-          <p class="side-note">Selection Round content received — no reviewer yet. Assign one, or decide it yourself.</p>
-        {% elif sub.r2_status == "r2_under_review" %}
-          <p class="side-note">The Selection Round reviewer is working on this submission. You can change the reviewer or take over.</p>
-        {% elif sub.r2_status == "selected" %}
-          <p class="side-note">Final decision: Selected — the presentation is confirmed for INFRASURE 2027.</p>
-        {% elif sub.r2_status == "not_selected" %}
-          <p class="side-note">Final decision: Not selected — the submission ends here.</p>
-        {% endif %}
-      {% else %}
-        {% if sub.r1_status == "r1_pending" %}
-          <p class="side-note">Abstract Round — no reviewer yet. Assign one, or review it yourself.</p>
-        {% elif sub.r1_status == "r1_under_review" %}
-          <p class="side-note">The reviewer is working on the Abstract Round. You can change the reviewer or take over.</p>
-        {% elif sub.r1_status == "r1_selected" %}
-          <p class="side-note">Selected for the Selection Round — the student chooses their format{% if sub.format %}: {{ "PPT" if sub.format == "ppt" else "Poster" }}{% endif %}.{% if not sub.r2_status %} Selection Round content is pending.{% endif %}</p>
-        {% elif sub.r1_status == "r1_not_selected" %}
-          <p class="side-note">Not selected — this submission ends at the Abstract Round.</p>
-        {% endif %}
+      {% if sub.status == "submitted" %}
+        <p class="side-note">New paper — no reviewer yet. Assign one, or give feedback yourself.</p>
+      {% elif sub.status == "under_review" %}
+        <p class="side-note">A reviewer is working on this paper. You can change the reviewer or take over.</p>
+      {% elif sub.status == "feedback_released" %}
+        <p class="side-note">Review feedback released. Waiting for the participant to submit the final version.</p>
+      {% elif sub.status == "round2_submitted" %}
+        <p class="side-note">Final submission received. Record the final decision — the assigned reviewer can also decide.</p>
+      {% elif sub.status == "selected" %}
+        <p class="side-note">Final decision: Selected{% if sub.presenting %} — presenting as {{ "Presentation" if sub.presentation_format == "ppt" else "Poster" }}{% endif %}.</p>
+      {% elif sub.status == "not_selected" %}
+        <p class="side-note">Final decision: Not selected — the submission ends here.</p>
       {% endif %}
       {% for a in actions %}
         <a class="btn btn-lg btn-block {{ a.get('cls', 'btn-outline') }}" href="{{ a.url }}">{{ a.label }}</a>
       {% endfor %}
-      <a class="btn btn-ghost btn-lg btn-block" href="/incharge/dashboard{% if round_no == 2 %}?round=2{% endif %}">Back</a>
+      {% if user.role == "master_admin" %}
+        <form method="post" action="/admin/submissions/{{ sub.id }}/format" class="field admin-format-form">
+          {{ ui.csrf_field() }}
+          <label for="presentation_format">Presentation format (admin override)</label>
+          <select id="presentation_format" name="presentation_format">
+            <option value="ppt" {% if sub.presentation_format == "ppt" %}selected{% endif %}>Presentation</option>
+            <option value="poster" {% if sub.presentation_format == "poster" %}selected{% endif %}>Poster</option>
+          </select>
+          <button class="btn btn-sm btn-outline" type="submit">Update format</button>
+        </form>
+      {% endif %}
+      <a class="btn btn-ghost btn-lg btn-block" href="{{ back_url }}">Back</a>
     </div>
   </div>
 </section>

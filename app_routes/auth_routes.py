@@ -261,8 +261,8 @@ def verify_otp_submit(request: Request, email: str = Form(""), purpose: str = Fo
             reset_token=issue_reset_token(email),
         )
     if purpose == "institute":
-        # handled in student_routes (needs the logged-in user) — see /student/verifyotp
-        return flash_response("/student/info", "otp_missing")
+        # handled in student_routes (needs the logged-in user) — see /participant/verifyotp
+        return flash_response("/participant/info", "otp_missing")
     return flash_response("/", "otp_missing")
 
 

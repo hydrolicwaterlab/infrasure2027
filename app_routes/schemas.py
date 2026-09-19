@@ -3,12 +3,13 @@ import re
 
 from pydantic import BaseModel, field_validator, model_validator
 
-MAX_SUBMISSIONS = 2
+from site_config import INR_COUNTRIES
+
 MAX_AUTHORS = 100
 FORMATS = ("ppt", "poster")
-ROUND1_DECISIONS = ("r1_selected", "r1_not_selected")
+PAPER_TYPES = ("full_paper", "extended_abstract")
 DESIGNATIONS = ("UG", "PG", "PhD Scholar", "Faculty", "Industry", "Other")
-PARTICIPANT_CATEGORY = ("Student", "Academic", "Industry")
+PARTICIPANT_CATEGORY = ("Student", "Academic", "Industry", "Others")
 STUDENT_LEVEL = ("UG", "PG", "PhD")
 UG_PROGRAM = ("BTech", "Dual Degree")
 DEGREE_UG = ("BTech", "BE", "BSc", "BA", "BArch", "BDes", "Other")
@@ -234,7 +235,7 @@ def clean_author_email(v: str) -> str:
 
 
 class AuthorForm(BaseModel):
-    """A single author row on a Poster Selection Round form — all plain text, email not verified."""
+    """A single author row on a paper submission form — all plain text, email not verified."""
 
     model_config = {"validate_default": True}
 
@@ -264,12 +265,22 @@ class AuthorForm(BaseModel):
         return clean_author_email(v)
 
 
-class SubmissionForm(BaseModel):
-    """Abstract Round — title + abstract only. The format (PPT/Poster) is chosen in the Selection Round."""
+def _clean_authors(v: list[AuthorForm]) -> list[AuthorForm]:
+    if not v:
+        raise ValueError("Please add at least one author.")
+    if len(v) > MAX_AUTHORS:
+        raise ValueError(f"Please list no more than {MAX_AUTHORS} authors.")
+    return v
+
+
+class PaperSubmissionForm(BaseModel):
+    """Round-1 paper — theme + type + title + authors + presentation format. The PDF is validated by the route."""
 
     theme: str = ""
+    paper_type: str = ""
+    presentation_format: str = ""
     title: str = ""
-    description: str = ""
+    authors: list[AuthorForm] = []
 
     @field_validator("theme")
     @classmethod
@@ -278,88 +289,58 @@ class SubmissionForm(BaseModel):
             raise ValueError("Please choose one of the nine conference themes.")
         return v
 
-    @field_validator("title")
+    @field_validator("paper_type")
     @classmethod
-    def _title(cls, v: str) -> str:
-        return clean_title(v)
+    def _paper_type(cls, v: str) -> str:
+        if v not in PAPER_TYPES:
+            raise ValueError("Please choose Full Paper or Extended Abstract.")
+        return v
 
-    @field_validator("description")
+    @field_validator("presentation_format")
     @classmethod
-    def _description(cls, v: str) -> str:
-        return clean_description(v)
-
-
-class FormatChoiceForm(BaseModel):
-    """Selection Round starts with the student choosing PPT or Poster — per submission."""
-
-    format: str = ""
-
-    @field_validator("format")
-    @classmethod
-    def _format(cls, v: str) -> str:
+    def _presentation_format(cls, v: str) -> str:
         if v not in FORMATS:
-            raise ValueError("Please choose PPT or Poster.")
+            raise ValueError("Please choose Presentation or Poster.")
         return v
-
-
-class RoundOneDecisionForm(BaseModel):
-    """Abstract Round decision — Selected for the Selection Round, or Not Selected (dead end).
-
-    Recorded by the assigned reviewer (when under review) or by the theme incharge
-    directly. Always accompanies feedback shown to the student.
-    """
-
-    decision: str = ""
-    comment: str = ""
-
-    @field_validator("decision")
-    @classmethod
-    def _decision(cls, v: str) -> str:
-        if v not in ROUND1_DECISIONS:
-            raise ValueError("Please choose Selected for the Selection Round or Not Selected.")
-        return v
-
-    @field_validator("comment")
-    @classmethod
-    def _comment(cls, v: str) -> str:
-        if len(v.strip()) < 10:
-            raise ValueError("Please leave at least a short note with your feedback.")
-        return v.strip()[:1000]
-
-
-class RoundTwoForm(BaseModel):
-    """Selection Round (Poster) — revised title + abstract addressing the Abstract Round feedback."""
-
-    title: str = ""
-    description: str = ""
-    authors: list[AuthorForm] = []
 
     @field_validator("title")
     @classmethod
     def _title(cls, v: str) -> str:
         return clean_title(v)
-
-    @field_validator("description")
-    @classmethod
-    def _description(cls, v: str) -> str:
-        return clean_description(v)
 
     @field_validator("authors")
     @classmethod
     def _authors(cls, v: list[AuthorForm]) -> list[AuthorForm]:
-        if not v:
-            raise ValueError("Please add at least one author.")
-        if len(v) > MAX_AUTHORS:
-            raise ValueError(f"Please list no more than {MAX_AUTHORS} authors.")
-        return v
+        return _clean_authors(v)
 
 
-class RoundTwoDecisionForm(BaseModel):
-    """Final decision — Selected, or Not Selected (dead end).
+class Round2Form(BaseModel):
+    """Round-2 submission — title and type stay fixed; authors editable, PDF optionally replaced."""
 
-    Recorded by the assigned Selection Round reviewer (when under review) or by the theme
-    incharge directly. The decision is a plain confirmation; feedback is not collected here.
-    """
+    authors: list[AuthorForm] = []
+
+    @field_validator("authors")
+    @classmethod
+    def _authors(cls, v: list[AuthorForm]) -> list[AuthorForm]:
+        return _clean_authors(v)
+
+
+class PaperFeedbackForm(BaseModel):
+    """Round-1 feedback — every submission advances; this is guidance, not a decision."""
+
+    feedback: str = ""
+
+    @field_validator("feedback")
+    @classmethod
+    def _feedback(cls, v: str) -> str:
+        v = (v or "").strip()
+        if len(v) < 10:
+            raise ValueError("Please leave at least a short note of feedback.")
+        return v[:2000]
+
+
+class FinalDecisionForm(BaseModel):
+    """Final decision after the revision window — Selected, or Not Selected."""
 
     decision: str = ""
     comment: str = ""
@@ -375,6 +356,12 @@ class RoundTwoDecisionForm(BaseModel):
     @classmethod
     def _comment(cls, v: str) -> str:
         return (v or "").strip()[:1000]
+
+
+class PresentationChoiceForm(BaseModel):
+    """After selection — whether the student will present this paper. The format was chosen at submission."""
+
+    presenting: str = ""
 
 
 class AnnouncementForm(BaseModel):
@@ -447,13 +434,13 @@ class AttendanceForm(BaseModel):
     """Participant details with conditional branching.
 
     Branching:
-      participant_category = Student | Academic | Industry (compulsory)
+      participant_category = Student | Academic | Industry | Others (compulsory)
       Student → student_level (UG|PG|PhD), ug_program (if UG), degree_name,
                 department, institute_name, institute_address, institute_email,
                 supervisor_name (if PhD)
       Academic → academic_role (Postdoc|ECR|Professor), professor_type (if Professor),
                  department, institute_name, institute_address, institute_email
-      Industry → company_name, position, company_email (+ optional company_address)
+      Industry / Others → company_name, position, company_email (+ optional company_address)
     All fields in the active branch are compulsory.
     Legacy fields `designation`/`affiliation` are kept optional for backward compat.
     """
@@ -470,6 +457,7 @@ class AttendanceForm(BaseModel):
     institute_name: str = ""
     institute_address: str = ""
     institute_country: str = ""
+    institute_country_other: str = ""
     institute_zipcode: str = ""
     institute_email: str = ""
     institute_email_same: str = ""
@@ -481,6 +469,7 @@ class AttendanceForm(BaseModel):
     company_email: str = ""
     company_address: str = ""
     company_country: str = ""
+    company_country_other: str = ""
     company_zipcode: str = ""
     company_email_same: str = ""
     # account email for cross-check (passed from route, not rendered)
@@ -513,7 +502,7 @@ class AttendanceForm(BaseModel):
         # top-level category
         cat = (self.participant_category or "").strip()
         if cat not in PARTICIPANT_CATEGORY:
-            raise ValueError("Please select whether you are Student, Academic or Industry.")
+            raise ValueError("Please select whether you are Student, Academic, Industry or Others.")
         self.participant_category = cat
         self.account_email = (self.account_email or "").strip().lower()
 
@@ -542,6 +531,15 @@ class AttendanceForm(BaseModel):
             if not re.match(r"^[A-Za-z \-']+$", v):
                 raise ValueError("Country should contain only letters, spaces, hyphens or apostrophes.")
             return v.strip()
+
+        def _country_choice(val: str, other: str, msg: str) -> str:
+            """Country dropdown: a domestic (INR) country, or a typed name for Others."""
+            v = _req(val, msg)
+            if v == "Others":
+                return _country(other, "Please enter your country name.")
+            if v not in INR_COUNTRIES:
+                raise ValueError("Please choose a country from the list.")
+            return v
 
         def _zipcode(val: str, msg: str) -> str:
             v = _req(val, msg)
@@ -573,7 +571,8 @@ class AttendanceForm(BaseModel):
             self.department = _req(self.department, "Please enter your department.")
             self.institute_name = _req(self.institute_name, "Please enter your institute name.")
             self.institute_address = _addr(self.institute_address, "Please enter your institute address.")
-            self.institute_country = _country(self.institute_country, "Please enter your country.")
+            self.institute_country = _country_choice(self.institute_country, self.institute_country_other, "Please select your country.")
+            self.institute_country_other = ""
             self.institute_zipcode = _zipcode(self.institute_zipcode, "Please enter your zip / postal code.")
             # institute email: optional for UG/PG; compulsory otherwise
             same_inst = (self.institute_email_same or "").strip().lower() in ("on", "true", "1", "yes")
@@ -604,6 +603,7 @@ class AttendanceForm(BaseModel):
             self.company_email = (self.company_email or "").strip()
             self.company_address = (self.company_address or "").strip()
             self.company_country = (self.company_country or "").strip()
+            self.company_country_other = ""
             self.company_zipcode = (self.company_zipcode or "").strip()
             self.company_email_same = (self.company_email_same or "").strip()
 
@@ -624,7 +624,8 @@ class AttendanceForm(BaseModel):
             self.department = _req(self.department, "Please enter your department.")
             self.institute_name = _req(self.institute_name, "Please enter your institute / organization name.")
             self.institute_address = _addr(self.institute_address, "Please enter your institute address.")
-            self.institute_country = _country(self.institute_country, "Please enter your country.")
+            self.institute_country = _country_choice(self.institute_country, self.institute_country_other, "Please select your country.")
+            self.institute_country_other = ""
             self.institute_zipcode = _zipcode(self.institute_zipcode, "Please enter your zip / postal code.")
             same_inst = (self.institute_email_same or "").strip().lower() in ("on", "true", "1", "yes")
             self.institute_email_same = "on" if same_inst else ""
@@ -649,9 +650,10 @@ class AttendanceForm(BaseModel):
             self.company_email = (self.company_email or "").strip()
             self.company_address = (self.company_address or "").strip()
             self.company_country = (self.company_country or "").strip()
+            self.company_country_other = ""
             self.company_zipcode = (self.company_zipcode or "").strip()
 
-        else:  # Industry
+        else:  # Industry / Others
             self.company_name = _req(self.company_name, "Please enter your company name.")
             self.position = _req(self.position, "Please enter your position / designation.")
             same_comp = (self.company_email_same or "").strip().lower() in ("on", "true", "1", "yes")
@@ -667,7 +669,8 @@ class AttendanceForm(BaseModel):
                 if _is_personal_email(self.company_email):
                     raise ValueError("Please use your official company email, not a personal email (Gmail/Yahoo/Outlook etc.).")
             self.company_address = _addr(self.company_address, "Please enter your company address.")
-            self.company_country = _country(self.company_country, "Please enter your country.")
+            self.company_country = _country_choice(self.company_country, self.company_country_other, "Please select your country.")
+            self.company_country_other = ""
             self.company_zipcode = _zipcode(self.company_zipcode, "Please enter your zip / postal code.")
 
             # clear student/academic but keep department not needed
@@ -678,6 +681,7 @@ class AttendanceForm(BaseModel):
             self.institute_name = (self.institute_name or "").strip()
             self.institute_address = (self.institute_address or "").strip()
             self.institute_country = (self.institute_country or "").strip()
+            self.institute_country_other = ""
             self.institute_zipcode = (self.institute_zipcode or "").strip()
             self.institute_email = (self.institute_email or "").strip()
             self.supervisor_name = (self.supervisor_name or "").strip()

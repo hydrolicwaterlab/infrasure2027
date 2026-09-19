@@ -2,18 +2,36 @@
 {% from "_macros.html" import csrf_field with context %}
 {% block title %}My details — {{ config.name }}{% endblock %}
 {% block content %}
+{% set saarc = config.countries or [] %}
+{% macro country_block(id, name, label, selected, other, saarc) %}
+  {%- set is_other = selected and (selected == 'Others' or selected not in saarc) -%}
+  {%- set other_val = other or (selected if selected and selected != 'Others' and selected not in saarc else '') -%}
+  <div class="field">
+    <label for="{{ id }}">{{ label }} <span class="req">*</span></label>
+    <select id="{{ id }}" name="{{ name }}">
+      <option value="">— Select —</option>
+      {% for c in saarc %}<option value="{{ c }}" {% if selected == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      <option value="Others" {% if is_other %}selected{% endif %}>Others</option>
+    </select>
+    <div data-show-if="{{ name }}==Others" {% if not is_other %}hidden{% endif %}>
+      <label for="{{ id }}_other" style="margin-top:8px;">Country name <span class="req">*</span></label>
+      <input type="text" id="{{ id }}_other" name="{{ name }}_other" value="{{ other_val }}" placeholder="e.g. Germany" />
+      <p class="field-hint">Countries outside India, Nepal, Bhutan and Sri Lanka pay the foreign (USD) rate.</p>
+    </div>
+  </div>
+{% endmacro %}
 <section class="page-head page-head-compact">
   <div class="container">
     <p class="eyebrow eyebrow-on-dark">Participant portal</p>
     <h1 class="display display-on-dark">{{ "Edit your details" if mode == "edit" else "Tell us about yourself" }}</h1>
-    <p class="page-head-sub">Complete these details once — you can then submit up to two presentations. All fields in your chosen category are compulsory. Approval of these details is only needed before payment.</p>
+    <p class="page-head-sub">Complete these details once — you can then submit as many papers as you like. All fields in your chosen category are compulsory. Approval of these details is only needed before payment.</p>
   </div>
 </section>
 
 <section class="form-section">
   <div class="container container-narrow">
     {% include "_form_errors.html" %}
-    <form method="post" class="panel form-card" action="/student/info" novalidate id="info-form" data-acct-email="{{ user.email }}" data-is-personal="{{ 'true' if account_is_personal is defined and account_is_personal else 'false' }}">
+    <form method="post" class="panel form-card" action="/participant/info" novalidate id="info-form" data-acct-email="{{ user.email }}" data-is-personal="{{ 'true' if account_is_personal is defined and account_is_personal else 'false' }}">
       {{ csrf_field() }}
       <!-- Common -->
       <div class="field">
@@ -44,6 +62,7 @@
           <option value="Student" {% if values.participant_category == "Student" %}selected{% endif %}>Student — UG / PG / PhD</option>
           <option value="Academic" {% if values.participant_category == "Academic" %}selected{% endif %}>Academic — Postdoc · ECR · Professor</option>
           <option value="Industry" {% if values.participant_category == "Industry" %}selected{% endif %}>Industry — Company professional</option>
+          <option value="Others" {% if values.participant_category == "Others" %}selected{% endif %}>Others</option>
         </select>
         <p class="field-hint">Choose the group that best describes you.</p>
       </div>
@@ -101,10 +120,7 @@
           <textarea id="institute_address" name="institute_address" rows="2" placeholder="Full postal address of your institute">{{ values.institute_address or '' }}</textarea>
         </div>
         <div class="field-row">
-          <div class="field">
-            <label for="institute_country">Country <span class="req">*</span></label>
-            <input type="text" id="institute_country" name="institute_country" value="{{ values.institute_country or '' }}" placeholder="e.g. India" />
-          </div>
+          {{ country_block('institute_country', 'institute_country', 'Country', values.institute_country, values.institute_country_other, saarc) }}
           <div class="field">
             <label for="institute_zipcode">Zip / Postal code <span class="req">*</span></label>
             <input type="text" id="institute_zipcode" name="institute_zipcode" value="{{ values.institute_zipcode or '' }}" placeholder="e.g. 721302" />
@@ -171,10 +187,7 @@
           <textarea id="academic_institute_address" name="institute_address" rows="2" placeholder="Full postal address">{{ values.institute_address or '' }}</textarea>
         </div>
         <div class="field-row">
-          <div class="field">
-            <label for="academic_institute_country">Country <span class="req">*</span></label>
-            <input type="text" id="academic_institute_country" name="institute_country" value="{{ values.institute_country or '' }}" placeholder="e.g. India" />
-          </div>
+          {{ country_block('academic_institute_country', 'institute_country', 'Country', values.institute_country, values.institute_country_other, saarc) }}
           <div class="field">
             <label for="academic_institute_zipcode">Zip / Postal code <span class="req">*</span></label>
             <input type="text" id="academic_institute_zipcode" name="institute_zipcode" value="{{ values.institute_zipcode or '' }}" placeholder="e.g. 721302" />
@@ -195,8 +208,8 @@
       </div>
 
       <!-- ========== INDUSTRY branch ========== -->
-      <div class="branch-panel" data-branch="Industry" {% if values.participant_category != "Industry" %}hidden{% endif %}>
-        <p class="branch-title">Industry details</p>
+      <div class="branch-panel" data-branch="Industry|Others" {% if values.participant_category not in ["Industry", "Others"] %}hidden{% endif %}>
+        <p class="branch-title">Industry / Other details</p>
         <div class="field">
           <label for="company_name">Company name <span class="req">*</span></label>
           <input type="text" id="company_name" name="company_name" value="{{ values.company_name or values.affiliation or '' }}" placeholder="e.g. L&T Construction" />
@@ -226,10 +239,7 @@
           <textarea id="company_address" name="company_address" rows="2" placeholder="Full postal address">{{ values.company_address or '' }}</textarea>
         </div>
         <div class="field-row">
-          <div class="field">
-            <label for="company_country">Country <span class="req">*</span></label>
-            <input type="text" id="company_country" name="company_country" value="{{ values.company_country or '' }}" placeholder="e.g. India" />
-          </div>
+          {{ country_block('company_country', 'company_country', 'Country', values.company_country, values.company_country_other, saarc) }}
           <div class="field">
             <label for="company_zipcode">Zip / Postal code <span class="req">*</span></label>
             <input type="text" id="company_zipcode" name="company_zipcode" value="{{ values.company_zipcode or '' }}" placeholder="e.g. 721302" />
@@ -239,7 +249,7 @@
 
       <div class="form-actions">
         <button class="btn btn-primary btn-lg" type="submit">{{ "Save changes" if mode == "edit" else "Save my details" }}</button>
-        <a class="btn btn-ghost btn-lg" href="/student/dashboard">Cancel</a>
+        <a class="btn btn-ghost btn-lg" href="/participant/dashboard">Cancel</a>
       </div>
     </form>
   </div>

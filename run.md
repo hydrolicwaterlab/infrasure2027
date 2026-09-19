@@ -63,26 +63,38 @@ uvicorn main:app --port 8000 --proxy-headers --forwarded-allow-ips <PROXY_IP>
 
 Open http://127.0.0.1:8000
 
-## 4. The submission workflow (2 rounds)
+## 4. The submission workflow
 
 ```
-student registers → student completes their details (info) → may apply (max 2)
-  → Round 1 submitted (PPT/Poster + theme + title + abstract) → status: pending
-  → incharge assigns a reviewer (or reviews Round 1 themselves)
-  → under_review → reviewer sends feedback / questions / requested changes
-  → feedback_given  (NO selected/not-selected in round 1)
-  → student submits Round 2 — same record, fills title_r2/description_r2 (format
-    and theme stay fixed) → status: awaiting_decision
-  → Round 2 goes straight to the theme incharge (no reviewer)
-  → awaiting_decision → incharge sees Round1 + feedback + Round2 side-by-side
-  → decides selected | not_selected
+student registers → completes their details (info) → may submit any number of papers
+  → "New submission" → picks Full Paper or Extended Abstract
+    → form: theme + title + PDF + authors → status: submitted
+  → incharge assigns a reviewer (or reviews it themselves)
+  → under_review → reviewer sends feedback ONLY (no selected/not-selected here)
+  → feedback_released  (every submission advances)
+  → while the final-submission window is open (open by default), student may
+    upload a revised PDF and/or edit authors (title and paper type stay fixed)
+    then clicks "Submit for Final Review" → status: round2_submitted (locked)
+  → reviewer/incharge records the final decision → selected | not_selected
+  → admin declares results → if selected, student picks PPT or Poster and ticks
+    whether they will present it
+  → payment: charged per presentation the student opted in to
 ```
 
-- Only 2 rounds. Reviewer never selects anything — review is feedback only.
-- Payment unlocks only after: a presentation is **selected** AND the conference
-  team **approves** the student's details (`/admin/registrations`).
-- Payment page is a **simulation** — it marks `fee_paid: true`. A real gateway
-  comes later.
+- There is **no cap** on submissions; each paper is an independent record.
+- Review feedback is guidance only — **everyone advances**; the only
+  Selected / Not Selected decision happens after the final submission.
+- The final-submission window is **open by default**; the admin can Stop it
+  (there is no "open revision" step). Final decisions require the student to
+  have submitted the final version (`round2_submitted`).
+- Payment unlocks only after: a paper is **selected**, results are declared,
+  AND the conference team **approves** the student's details
+  (`/admin/registrations`). Presentation choice follows results automatically.
+- Payment page is a **simulation** — it marks `fee_paid: true`. The
+  per-presentation fee comes from the main-page registration table by category
+  (Student / Academic → Faculty / Academic, Industry → Delegate; non-India
+  participants → Foreign Delegate) and by date (early bird through 30 Dec 2026,
+  spot after). A real gateway comes later.
 
 ## 5. Project layout
 
