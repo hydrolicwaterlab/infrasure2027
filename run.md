@@ -92,9 +92,10 @@ student registers → completes their details (info) → may submit any number o
   (`/admin/registrations`). Presentation choice follows results automatically.
 - Payment page is a **simulation** — it marks `fee_paid: true`. The
   per-presentation fee comes from the main-page registration table by category
-  (Student / Academic → Faculty / Academic, Industry → Delegate; non-India
-  participants → Foreign Delegate) and by date (early bird through 30 Dec 2026,
-  spot after). A real gateway comes later.
+  (Student → Indian Students, Academic → Faculty / Research Scientist / Engineers
+  from Govt. Org., Industry/Others → Consultant / Other; non-India participants →
+  Foreign Delegates / Authors) and by date (early bird through 31 Dec 2026,
+  standard after). A real gateway comes later.
 
 ## 5. Project layout
 

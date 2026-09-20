@@ -30,10 +30,11 @@
 #              Public pages are crawlable; auth panels are not.
 # Timeline:    Abstract open 10 Sep 2026 → Closes 15 Oct 2026 → Acceptance
 #              30 Oct 2026 → Full paper 30 Nov 2026 → Review 10 Dec 2026 →
-#              Final paper 20 Dec 2026 → Early Bird 30 Dec 2026 → Conference
+#              Final paper 20 Dec 2026 → Early Bird 31 Dec 2026 → Conference
 #              22-24 Jan 2027
-# Fees:        Student/Faculty ₹2,000 EB / ₹3,000 Spot; Delegate ₹6,000/
-#              ₹8,000; Foreign $150/$200; Accompanying ₹2,000; No refunds.
+# Fees:        Indian Students ₹2,000 EB / ₹3,000 Std; Faculty/Research
+#              Scientist/Govt. Org. ₹5,000/₹6,000; Consultant/Other ₹6,000/
+#              ₹8,000; Foreign Delegates/Authors US $150/$200; No refunds.
 # Generated:   2026-09-12 for INFRASURE 2027
 # Updated:     2026-09-12 — timeline, fees, no-refund policy
 # ========================================================================

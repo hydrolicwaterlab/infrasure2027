@@ -45,7 +45,7 @@
           <dd>
             {% if unit %}
               <strong>{{ count }} × {{ unit.display }} = {{ '₹' if unit.currency == 'INR' else '$' }}{{ '{:,}'.format(total_value) }}</strong>
-              <small class="cell-sub">{{ unit.label }} · {{ "Early bird" if unit.period == "early" else "Spot registration" }}</small>
+              <small class="cell-sub">{{ unit.label }} · {{ "Early bird" if unit.period == "early" else "Standard" }}</small>
             {% else %}
               <strong>{{ count }} × per-presentation fee</strong><small class="cell-sub">Amount to be announced — online payment integration arrives later.</small>
             {% endif %}

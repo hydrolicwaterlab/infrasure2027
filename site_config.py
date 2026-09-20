@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Countries billed at the INR (domestic) registration rate. Everyone else pays
-# the Foreign Delegate (USD) rate.
+# the Foreign Delegates / Authors (USD) rate.
 INR_COUNTRIES = ("India", "Nepal", "Bhutan", "Sri Lanka")
 
 SITE_CONFIG = {
@@ -243,14 +243,13 @@ SITE_CONFIG = {
     ],
     "max_pdf_mb": 25,
     "registration_fees": {
-        "note": "Early bird registration closes 30 Dec 2026. Spot registration thereafter.",
-        "early_bird_until": "2026-12-30",
+        "note": "The registration fee includes conference kit, access to all technical sessions, proceedings, lunch and refreshments.",
+        "early_bird_until": "2026-12-31",
         "categories": [
-            {"label": "Student", "early": "₹2,000", "spot": "₹3,000", "early_value": 2000, "spot_value": 3000, "currency": "INR"},
-            {"label": "Faculty / Academic", "early": "₹2,000", "spot": "₹3,000", "early_value": 2000, "spot_value": 3000, "currency": "INR"},
-            {"label": "Delegate", "early": "₹6,000", "spot": "₹8,000", "early_value": 6000, "spot_value": 8000, "currency": "INR"},
-            {"label": "Foreign Delegate", "early": "$150", "spot": "$200", "early_value": 150, "spot_value": 200, "currency": "USD"},
-            {"label": "Accompanying Person", "early": "₹2,000", "spot": "₹2,000", "early_value": 2000, "spot_value": 2000, "currency": "INR"},
+            {"label": "Foreign Delegates / Authors", "early": "US $150", "spot": "US $200", "early_value": 150, "spot_value": 200, "currency": "USD"},
+            {"label": "Indian Students", "early": "₹2,000", "spot": "₹3,000", "early_value": 2000, "spot_value": 3000, "currency": "INR"},
+            {"label": "Faculty / Research Scientist / Engineers from Govt. Org.", "early": "₹5,000", "spot": "₹6,000", "early_value": 5000, "spot_value": 6000, "currency": "INR"},
+            {"label": "Consultant / Other", "early": "₹6,000", "spot": "₹8,000", "early_value": 6000, "spot_value": 8000, "currency": "INR"},
         ],
     },
     "cfp_timeline": [

@@ -380,12 +380,12 @@ def presenting_count(user: dict) -> int:
 
 # Participant category -> registration-fee row on the main-page table.
 FEE_CATEGORY_BY_PARTICIPANT = {
-    "Student": "Student",
-    "Academic": "Faculty / Academic",
-    "Industry": "Delegate",
-    "Others": "Delegate",
+    "Student": "Indian Students",
+    "Academic": "Faculty / Research Scientist / Engineers from Govt. Org.",
+    "Industry": "Consultant / Other",
+    "Others": "Consultant / Other",
 }
-FEE_FOREIGN_LABEL = "Foreign Delegate"
+FEE_FOREIGN_LABEL = "Foreign Delegates / Authors"
 
 # Domestic (INR) rate applies to the INR_COUNTRIES; everyone else is foreign.
 _INR_COUNTRY_KEYS = {c.lower() for c in INR_COUNTRIES} | {"in", "bharat"}
@@ -409,7 +409,7 @@ def unit_fee(reg: dict | None):
     """Per-presentation fee taken from the main-page table.
 
     The row follows the participant's category (foreign participants use the
-    Foreign Delegate row). Early-bird pricing applies through the date in
+    Foreign Delegates / Authors row). Early-bird pricing applies through the date in
     ``registration_fees.early_bird_until``; spot pricing after. Returns a dict
     ``{label, period, value, currency, display}`` or ``None`` if unresolvable.
     """

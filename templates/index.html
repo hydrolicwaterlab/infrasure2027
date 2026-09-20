@@ -352,16 +352,16 @@
             <thead>
               <tr>
                 <th>Category</th>
-                <th>Early Bird</th>
-                <th>Spot Registration</th>
+                <th>Early Bird (Up to 31 Dec 2026)</th>
+                <th>Standard</th>
               </tr>
             </thead>
             <tbody>
               {% for c in config.registration_fees.categories %}
               <tr>
                 <td data-label="Category">{{ c.label }}</td>
-                <td data-label="Early Bird">{% if c.early is defined %}{{ c.early }}{% elif c.amount %}{{ c.amount }}{% else %}<span class="tba">To be announced</span>{% endif %}</td>
-                <td data-label="Spot Registration">{% if c.spot is defined %}{{ c.spot }}{% elif c.amount %}{{ c.amount }}{% else %}<span class="tba">To be announced</span>{% endif %}</td>
+                <td data-label="Early Bird (Up to 31 Dec 2026)">{% if c.early is defined %}{{ c.early }}{% elif c.amount %}{{ c.amount }}{% else %}<span class="tba">To be announced</span>{% endif %}</td>
+                <td data-label="Standard">{% if c.spot is defined %}{{ c.spot }}{% elif c.amount %}{{ c.amount }}{% else %}<span class="tba">To be announced</span>{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>
